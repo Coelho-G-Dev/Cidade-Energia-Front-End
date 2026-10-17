@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/* Celular deitado: pouca altura, então a navegação vira trilho lateral como no desktop. */
+@custom-variant deitado (@media (orientation: landscape) and (max-height: 500px));
+
+@theme {
+  --color-fundo: #f5f8fc;
+  --color-superficie: #ffffff;
+  --color-tinta: #0f2240;
+  --color-apoio: #4b5a72;
+  --color-primaria: #1e4b9c;
+  --color-primaria-tinta: #ffffff;
+  --color-primaria-suave: #dde6f6;
+  --color-destaque: #f2b705;
+  --color-destaque-tinta: #0f2240;
+  --color-sucesso: #1c7448;
+  --color-sucesso-suave: #ddf0e4;
+  --color-trilho: #dde6f6;
+  --color-erro: #b0322a;
+  --color-erro-suave: #fae3df;
+
+  --radius-pequeno: 6px;
+  --radius-botao: 8px;
+  --radius-cartao: 10px;
+
+  --shadow-azulejo: 3px 3px 0 #0f2240;
+
+  --ease-padrao: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --text-titulo-1: clamp(1.625rem, 1.3rem + 1.4vw, 2.25rem);
+  --text-titulo-1--line-height: 1.15;
+  --text-titulo-2: clamp(1.375rem, 1.15rem + 1vw, 1.75rem);
+  --text-titulo-2--line-height: 1.2;
+  --text-titulo-3: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  --text-titulo-3--line-height: 1.3;
+  --text-numero: clamp(1.625rem, 1.35rem + 1.2vw, 2.125rem);
+  --text-numero--line-height: 1.2;
+  --text-corpo: clamp(0.9375rem, 0.9rem + 0.15vw, 1rem);
+  --text-corpo--line-height: 1.5;
+  --text-pequeno: 0.8125rem;
+  --text-pequeno--line-height: 1.4;
+  --text-mini: 0.75rem;
+  --text-mini--line-height: 1.3;
+}
+
+@theme inline {
+  --font-titulo: var(--font-bricolage), "Figtree", system-ui, sans-serif;
+  --font-corpo: var(--font-figtree), system-ui, sans-serif;
+}
+
+:root {
+  --duracao-rapida: 120ms;
+  --duracao-padrao: 220ms;
+  --duracao-enfatica: 400ms;
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* No celular a navegação é uma barra fixa embaixo: ao seguir o foco, a rolagem para acima dela. */
+  html:has(#conteudo) {
+    scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 64rem), (orientation: landscape) and (max-height: 500px) {
+    html:has(#conteudo) {
+      scroll-padding-bottom: 0;
+    }
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-fundo);
+    color: var(--color-tinta);
+    font-family: var(--font-corpo);
+    font-size: var(--text-corpo);
+    line-height: var(--text-corpo--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-titulo);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-tinta);
+    outline-offset: 2px;
+  }
+
+  .foco-claro :focus-visible,
+  .foco-claro:focus-visible {
+    outline-color: var(--color-superficie);
+  }
+}
+
+@layer components {
+  /* Larguras das páginas dentro dos 1120 px: leitura e formulário ficam estreitos. */
+  .pagina-estreita {
+    width: 100%;
+    max-width: 42rem;
+    margin-inline: auto;
+  }
+
+  .pagina-media {
+    width: 100%;
+    max-width: 56rem;
+    margin-inline: auto;
+  }
+
+  .afundar {
+    transition:
+      transform var(--duracao-rapida) var(--ease-padrao),
+      box-shadow var(--duracao-rapida) var(--ease-padrao);
+  }
+
+  .afundar:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 var(--color-tinta);
+  }
+
+  .afundar-leve {
+    transition: transform var(--duracao-rapida) var(--ease-padrao);
+  }
+
+  .afundar-leve:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: translateY(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Pinos do mapa (o Leaflet cria o elemento; o desenho vem de MapaLeaflet.tsx) */
+.pino-mapa {
+  padding: 2px;
+  border-radius: 9999px;
+}
+/* Botões de zoom com 44 px de toque, como o resto do app. */
+.leaflet-container .leaflet-bar.leaflet-control-zoom a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  font-size: 1.375rem;
+}
+.pino-mapa-corpo {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--color-superficie);
+  border-radius: 9999px;
+  box-shadow: 0 1px 4px rgb(15 34 64 / 0.35);
+}
+.pino-mapa-selecionado {
+  border-color: var(--color-tinta);
+  box-shadow: 3px 3px 0 var(--color-tinta);
+}
+.leaflet-marker-icon.pino-mapa:focus-visible {
+  outline: 3px solid var(--color-tinta);
+  outline-offset: 3px;
+}
+.leaflet-container {
+  font-family: inherit;
+  background: var(--color-primaria-suave);
+}
+.leaflet-container a {
+  color: var(--color-primaria);
+}
