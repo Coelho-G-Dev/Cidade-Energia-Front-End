@@ -10,6 +10,12 @@ import type { PontoMapa, TipoPontoMapa } from "@/types";
 
 const CENTRO_SAO_LUIS: L.LatLngTuple = [-2.535, -44.255];
 
+// O provedor dos blocos vem do ambiente: trocar de provedor é mudar as variáveis e publicar de novo.
+// Sem elas, usa o OpenStreetMap, que só permite uso leve.
+export const BLOCOS_URL = process.env.NEXT_PUBLIC_MAPA_BLOCOS_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+export const BLOCOS_ATRIBUICAO =
+  process.env.NEXT_PUBLIC_MAPA_ATRIBUICAO || '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
 // Traços dos ícones de src/components/ui/Icone, em texto porque o Leaflet desenha o pino fora do React.
 const TRACO: Record<TipoPontoMapa, string> = {
   solar: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -89,8 +95,8 @@ export default function MapaLeaflet({ pontos, selecionado, onSelecionar }: Props
       inertia={!poucoMovimento}
     >
       <TileLayer
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url={BLOCOS_URL}
+        attribution={BLOCOS_ATRIBUICAO}
         maxZoom={18}
       />
       <ZoomControl position="topleft" zoomInTitle="Aproximar o mapa" zoomOutTitle="Afastar o mapa" />
