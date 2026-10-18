@@ -307,7 +307,7 @@ export const LICOES: { id: string; trilhaSlug: string; ordem: number; titulo: st
     "ordem": 2,
     "titulo": "Onde descartar",
     "tipo": "texto",
-    "conteudo": "O lugar certo é um **ponto de coleta de eletrônicos**. Eles costumam ficar em lojas de eletrônicos, assistências técnicas, supermercados e ecopontos.\n\nNo Brasil existe a **logística reversa**: fabricantes e lojas precisam receber de volta alguns produtos depois do uso, como pilhas, baterias, lâmpadas e eletroeletrônicos. Isso está na **Política Nacional de Resíduos Sólidos** (Lei 12.305/2010).\n\n**Use o mapa do app** para encontrar pontos de coleta. Atenção: nesta versão de testes, os pontos do mapa são **ilustrativos**.\n\n**Missão:** leve um eletrônico velho a um ponto de coleta e registre na aba Missões."
+    "conteudo": "O lugar certo é um **ponto de coleta de eletrônicos**. Eles costumam ficar em lojas de eletrônicos, assistências técnicas, supermercados e ecopontos.\n\nNo Brasil existe a **logística reversa**: fabricantes e lojas precisam receber de volta alguns produtos depois do uso, como pilhas, baterias, lâmpadas e eletroeletrônicos. Isso está na **Política Nacional de Resíduos Sólidos** (Lei 12.305/2010).\n\n**Use o mapa do app** para encontrar pontos de coleta em São Luís, como os ecopontos da Prefeitura. Alguns também recebem pilhas e baterias: a descrição de cada ponto avisa. Antes de ir, confira o horário de funcionamento.\n\n**Missão:** leve um eletrônico velho a um ponto de coleta e registre na aba Missões."
   },
   {
     "id": "0c000000-0000-4000-8000-000000000044",
@@ -683,22 +683,86 @@ export const PONTOS_MAPA: PontoMapa[] = [
   },
   {
     "id": "0d000000-0000-4000-8000-000000000069",
-    "nome": "Ponto de coleta de eletrônicos - Vinhais (ilustrativo)",
+    "nome": "Ecoponto Vila Isabel - Central de Logística Reversa",
     "tipo": "coleta",
-    "latitude": -2.515,
-    "longitude": -44.262,
-    "descricao": "Ponto ilustrativo para testar o mapa: recebe celulares, carregadores e fones. Não corresponde a um local real."
+    "latitude": -2.562046,
+    "longitude": -44.317393,
+    "descricao": "Central de Logística Reversa de Eletroeletrônicos da COOPRESL, ao lado do Ecoponto Vila Isabel, em parceria com a Prefeitura de São Luís. Recebe eletrônicos. Av. dos Portugueses, Vila Isabel."
   },
   {
     "id": "0d000000-0000-4000-8000-000000000070",
-    "nome": "Ponto de coleta de pilhas e baterias - Cohab Anil (ilustrativo)",
+    "nome": "Ecoponto Calhau (Av. dos Holandeses)",
     "tipo": "coleta",
-    "latitude": -2.538,
-    "longitude": -44.22,
-    "descricao": "Ponto ilustrativo para testar o mapa: recebe pilhas e baterias. Não corresponde a um local real."
+    "latitude": -2.489828,
+    "longitude": -44.269783,
+    "descricao": "Recebe notebooks, eletrodomésticos, teclados e outros eletrônicos. Av. dos Holandeses, s/nº, Calhau."
   },
   {
     "id": "0d000000-0000-4000-8000-000000000071",
+    "nome": "Ecoponto Recanto do Vinhais",
+    "tipo": "coleta",
+    "latitude": -2.520757,
+    "longitude": -44.260119,
+    "descricao": "Recebe eletrônicos. Ecoponto da Prefeitura de São Luís. Funciona de segunda a sábado, das 7h às 19h."
+  },
+  {
+    "id": "0d000000-0000-4000-8000-000000000072",
+    "nome": "Ecoponto Jardim Renascença",
+    "tipo": "coleta",
+    "latitude": -2.494621,
+    "longitude": -44.288415,
+    "descricao": "Recebe eletrônicos, pilhas e baterias. Ecoponto da Prefeitura de São Luís. Rua Netuno, Jardim Renascença. Funciona de segunda a sábado, das 7h às 19h."
+  },
+  {
+    "id": "0d000000-0000-4000-8000-000000000073",
+    "nome": "Ecoponto Cidade Operária",
+    "tipo": "coleta",
+    "latitude": -2.564431,
+    "longitude": -44.199903,
+    "descricao": "Recebe eletrônicos. Ecoponto da Prefeitura de São Luís. Funciona de segunda a sábado, das 7h às 19h."
+  },
+  {
+    "id": "0d000000-0000-4000-8000-000000000074",
+    "nome": "Ecoponto Bequimão",
+    "tipo": "coleta",
+    "latitude": -2.528452,
+    "longitude": -44.24834,
+    "descricao": "Recebe eletrônicos. Ecoponto da Prefeitura de São Luís. Funciona de segunda a sábado, das 7h às 19h."
+  },
+  {
+    "id": "0d000000-0000-4000-8000-000000000075",
+    "nome": "Ecoponto Itapiracó",
+    "tipo": "coleta",
+    "latitude": -2.532347,
+    "longitude": -44.202923,
+    "descricao": "Recebe eletrônicos, pilhas e baterias. Ecoponto da Prefeitura de São Luís. Av. Joaquim Mochel, Itapiracó. Funciona de segunda a sábado, das 7h às 19h."
+  },
+  {
+    "id": "0d000000-0000-4000-8000-000000000076",
+    "nome": "UFMA - coleta de eletrônicos (CCET)",
+    "tipo": "coleta",
+    "latitude": -2.557943,
+    "longitude": -44.309531,
+    "descricao": "Ponto de coleta de resíduos eletrônicos na entrada do Centro de Ciências Exatas e Tecnologia (CCET), no campus da UFMA, Av. dos Portugueses."
+  },
+  {
+    "id": "0d000000-0000-4000-8000-000000000077",
+    "nome": "Ecoponto São Francisco",
+    "tipo": "coleta",
+    "latitude": -2.511555,
+    "longitude": -44.309188,
+    "descricao": "Recebe pilhas e baterias. Ecoponto da Prefeitura de São Luís. Av. Ferreira Gullar, ao lado da Estação Elevatória da Caema, São Francisco."
+  },
+  {
+    "id": "0d000000-0000-4000-8000-000000000078",
+    "nome": "Ecoponto Cohaserma",
+    "tipo": "coleta",
+    "latitude": -2.506966,
+    "longitude": -44.24818,
+    "descricao": "Recebe pilhas e baterias. Ecoponto da Prefeitura de São Luís. Rua Quatorze, s/nº, Parque Athenas, região do Cohaserma."
+  },
+  {
+    "id": "0d000000-0000-4000-8000-000000000079",
     "nome": "Mutirão de troca de lâmpadas - Cidade Operária (ilustrativo)",
     "tipo": "acao",
     "latitude": -2.579,
@@ -706,7 +770,7 @@ export const PONTOS_MAPA: PontoMapa[] = [
     "descricao": "Ação ilustrativa para testar o mapa: troca de lâmpadas antigas por LED. Não corresponde a um evento real."
   },
   {
-    "id": "0d000000-0000-4000-8000-000000000072",
+    "id": "0d000000-0000-4000-8000-000000000080",
     "nome": "Feira de eficiência energética - Renascença (ilustrativo)",
     "tipo": "acao",
     "latitude": -2.499,

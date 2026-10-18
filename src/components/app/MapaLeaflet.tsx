@@ -3,7 +3,7 @@
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { animate } from "motion/react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, Marker, TileLayer, useMap, ZoomControl } from "react-leaflet";
 import { usePoucoMovimento } from "@/lib/movimento";
 import type { PontoMapa, TipoPontoMapa } from "@/types";
@@ -57,6 +57,44 @@ function AjustarAoTamanho() {
   return null;
 }
 
+// Margens do enquadramento: meio pino (22 px) de folga em volta. À esquerda, os botões de zoom vão
+// até 58 px da borda; embaixo, a atribuição ocupa 17 px.
+export const MARGEM_ENQUADRAMENTO = { superiorEsquerda: [84, 28] as L.PointTuple, inferiorDireita: [28, 40] as L.PointTuple };
+// Com um ponto só (ou pontos muito juntos), não aproxima a ponto de perder o bairro de vista.
+export const ZOOM_MAXIMO_ENQUADRAMENTO = 15;
+
+/** Os limites que cobrem todos os pontos, ou `null` sem pontos. */
+export function limitesDosPontos(pontos: readonly Pick<PontoMapa, "latitude" | "longitude">[]): L.LatLngBounds | null {
+  if (pontos.length === 0) return null;
+  return L.latLngBounds(pontos.map((p) => [p.latitude, p.longitude] as L.LatLngTuple));
+}
+
+// Mostra todos os pontos visíveis. Na abertura enquadra sem animação; quando o filtro muda, o mapa
+// desliza até os pontos novos (com pouco movimento, pula direto). Selecionar um ponto não mexe no mapa.
+function EnquadrarPontos({ pontos, poucoMovimento }: { pontos: readonly PontoMapa[]; poucoMovimento: boolean }) {
+  const mapa = useMap();
+  const chave = pontos.map((p) => p.id).join(",");
+  const primeiraVez = useRef(true);
+  const pontosAtuais = useRef(pontos);
+  useEffect(() => {
+    pontosAtuais.current = pontos;
+  });
+
+  useEffect(() => {
+    const limites = limitesDosPontos(pontosAtuais.current);
+    if (!limites) return;
+    mapa.fitBounds(limites, {
+      paddingTopLeft: MARGEM_ENQUADRAMENTO.superiorEsquerda,
+      paddingBottomRight: MARGEM_ENQUADRAMENTO.inferiorDireita,
+      maxZoom: ZOOM_MAXIMO_ENQUADRAMENTO,
+      animate: !primeiraVez.current && !poucoMovimento,
+    });
+    primeiraVez.current = false;
+  }, [mapa, chave, poucoMovimento]);
+
+  return null;
+}
+
 // O Leaflet deixa o mapa focável para mover com as setas; o nome diz isso a quem usa leitor de tela.
 function NomearMapa() {
   const mapa = useMap();
@@ -86,6 +124,9 @@ export default function MapaLeaflet({ pontos, selecionado, onSelecionar }: Props
     <MapContainer
       center={CENTRO_SAO_LUIS}
       zoom={12}
+      // O enquadramento usa passos de 0,25 para chegar mais perto dos pontos; os botões seguem de 1 em 1.
+      zoomSnap={0.25}
+      zoomDelta={1}
       scrollWheelZoom={false}
       className="h-full w-full"
       attributionControl
@@ -101,6 +142,7 @@ export default function MapaLeaflet({ pontos, selecionado, onSelecionar }: Props
       />
       <ZoomControl position="topleft" zoomInTitle="Aproximar o mapa" zoomOutTitle="Afastar o mapa" />
       <AjustarAoTamanho />
+      <EnquadrarPontos pontos={pontos} poucoMovimento={poucoMovimento} />
       <NomearMapa />
       {pontos.map((ponto, i) => (
         <Marker
