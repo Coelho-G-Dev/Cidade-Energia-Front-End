@@ -117,7 +117,10 @@ export function ConversaTutor({ lateral = false }: Props) {
           <span className="text-pequeno text-apoio">{lateral ? "Com o Energinho, o tutor de energia" : "Tutor de energia"}</span>
         </div>
       </header>
-      <p className="text-pequeno text-apoio">A conversa não fica salva: ela some quando você sai desta tela.</p>
+      <p className="text-pequeno text-apoio">
+        O Energinho usa seu bairro e sua última simulação para dar exemplos. A conversa não fica salva: ela some quando você
+        sai desta tela.
+      </p>
 
       <div ref={rolagem} className={juntar("flex flex-1 flex-col gap-4", lateral && "-mx-1 min-h-0 overflow-y-auto px-1 pb-1")}>
         <ol className="flex flex-1 flex-col gap-3" aria-label="Conversa com o Energinho" aria-live="polite">

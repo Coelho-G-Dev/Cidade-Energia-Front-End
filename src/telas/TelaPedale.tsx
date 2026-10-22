@@ -1,12 +1,13 @@
 "use client";
 
 import { motion, useAnimationFrame, useMotionValue } from "motion/react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { AvisoLicaoTravada } from "@/components/app/AvisoLicaoTravada";
 import { useCelebrar } from "@/components/app/Celebracao";
 import { Carregando, EstadoErro } from "@/components/app/Estados";
 import { BarraProgresso } from "@/components/ui/BarraProgresso";
-import { BotaoLink } from "@/components/ui/Botao";
+import { Botao } from "@/components/ui/Botao";
 import { MensagemErro } from "@/components/ui/Campo";
 import { Chip } from "@/components/ui/Chip";
 import { Icone, type NomeIcone } from "@/components/ui/Icone";
@@ -16,10 +17,15 @@ import { juntar } from "@/lib/classes";
 import { numero } from "@/lib/conteudo";
 import { passoDepoisDaLicao } from "@/lib/missoesDasTrilhas";
 import { CURVA, DURACAO, usePoucoMovimento } from "@/lib/movimento";
+import { AFETADAS_POR_LICAO, invalidar, preCarregar } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
 import { useTemSessao } from "@/lib/useTemSessao";
+import type { LicaoConcluida } from "@/types";
 
 const TRILHA = "energia-solar-em-sao-luis";
+// Acender a lâmpada LED já registra a atividade; a TV (100 W) é o limite do que uma pessoa gera.
+const WATTS_LAMPADA = 9;
+const WATTS_TV = 100;
 
 export const WATTS_POR_PEDALADA = 14;
 export const WATTS_MAXIMO = 110;
@@ -113,6 +119,7 @@ function LinhaAparelho({ meta, watts, avisar }: { meta: Meta; watts: number; avi
 }
 
 export function TelaPedale() {
+  const router = useRouter();
   const celebrar = useCelebrar();
   const poucoMovimento = usePoucoMovimento();
   const trilha = useDados(`trilha-${TRILHA}`, () => api.obterTrilha(TRILHA));
@@ -129,28 +136,43 @@ export function TelaPedale() {
   const lista = useRef<HTMLUListElement>(null);
   const [exibidos, setExibidos] = useState(0);
   const [pedalou, setPedalou] = useState(false);
-  const [concluido, setConcluido] = useState(false);
+  const [tvLigada, setTvLigada] = useState(false);
+  const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  // A TV (100 W) é o limite do que uma pessoa gera: acender a TV conclui a lição.
   const licaoAtual = useRef(licao);
+  const sessaoAtual = useRef(temSessao);
   useEffect(() => {
     licaoAtual.current = licao;
+    sessaoAtual.current = temSessao;
   });
-  const jaConcluiu = useRef(false);
-  function concluirSeAcendeuTv(watts: number) {
-    const atual = licaoAtual.current;
-    if (watts < 100 || jaConcluiu.current || atual.estado !== "pronto") return;
-    jaConcluiu.current = true;
-    setConcluido(true);
-    // Com uma lição anterior pendente o back recusaria (e sem login não salva): pedalar vale como experiência.
-    if (atual.dados.concluida || atual.dados.licaoPendente) return;
-    api.concluirPedale(atual.dados.id).then(
-      (resultado) => celebrar(resultado, lista.current),
-      (e) => {
-        if (!(e instanceof ErroApi && e.codigo === "NAO_AUTENTICADO")) setErro(mensagemParaPessoa(e));
+
+  // Uma chamada por visita: a lâmpada e o botão usam o mesmo registro. Se falhar, o botão tenta de novo.
+  const registro = useRef<Promise<LicaoConcluida> | null>(null);
+  function registrar(licaoId: string): Promise<LicaoConcluida> {
+    registro.current ??= api.concluirPedale(licaoId).then(
+      (resultado) => {
+        invalidar(...AFETADAS_POR_LICAO);
+        celebrar(resultado, lista.current);
+        return resultado;
+      },
+      (e: unknown) => {
+        registro.current = null;
+        throw e;
       },
     );
+    return registro.current;
+  }
+
+  const lampadaAvisada = useRef(false);
+  function aoMudarWatts(watts: number) {
+    if (watts >= WATTS_TV) setTvLigada(true);
+    const atual = licaoAtual.current;
+    if (watts < WATTS_LAMPADA || lampadaAvisada.current || atual.estado !== "pronto") return;
+    lampadaAvisada.current = true;
+    // Sem login nada é salvo, e com uma lição anterior pendente o back recusaria: aí pedalar vale como experiência.
+    if (sessaoAtual.current !== true || atual.dados.licaoPendente) return;
+    registrar(atual.dados.id).catch((e: unknown) => setErro(mensagemParaPessoa(e)));
   }
 
   useAnimationFrame((agora, dt) => {
@@ -161,7 +183,7 @@ export function TelaPedale() {
     if (arredondado !== ultimoExibido.current) {
       ultimoExibido.current = arredondado;
       setExibidos(arredondado);
-      concluirSeAcendeuTv(arredondado);
+      aoMudarWatts(arredondado);
     }
   });
 
@@ -200,6 +222,27 @@ export function TelaPedale() {
       : null;
   const erroCarga = trilha.estado === "erro" ? trilha : licao.estado === "erro" ? licao : null;
   const pendente = licao.estado === "pronto" && temSessao ? licao.dados.licaoPendente : null;
+  const proxima = licao.estado === "pronto" ? licao.dados.proximaLicaoId : null;
+  useEffect(() => {
+    if (proxima) preCarregar(`licao-${proxima}`, () => api.obterLicao(proxima));
+  }, [proxima]);
+
+  // O botão registra a atividade antes de sair: é isso que libera a próxima lição e dá os pontos.
+  async function irEmFrente() {
+    if (licao.estado !== "pronto" || !passo || indo) return;
+    if (temSessao !== true) return router.push(passo.href);
+    setIndo(true);
+    setErro(null);
+    try {
+      await registrar(licao.dados.id);
+      router.push(passo.href);
+    } catch (e) {
+      setIndo(false);
+      // A tela estava desatualizada: busca a lição de novo, e o aviso mostra qual lição falta.
+      if (e instanceof ErroApi && e.codigo === "LICAO_BLOQUEADA") licao.recarregar();
+      setErro(mensagemParaPessoa(e));
+    }
+  }
 
   return (
     <div className="pagina-media flex flex-col gap-4">
@@ -250,7 +293,7 @@ export function TelaPedale() {
         </ul>
       </div>
 
-      {concluido && (
+      {tvLigada && (
         <p className="font-semibold text-sucesso" role="status">
           Você ligou a TV só com as pernas. Para um ar-condicionado, seriam {pessoasPedalando(1000)} pessoas pedalando sem parar.
         </p>
@@ -258,10 +301,10 @@ export function TelaPedale() {
       <MensagemErro id="erro-pedale" erro={erro} />
       {erroCarga && <EstadoErro erro={erroCarga.erro} onTentarDeNovo={erroCarga.recarregar} />}
       {!erroCarga && !passo && <Carregando rotulo="Carregando a lição" linhas={1} className="[&>div]:h-[52px]" />}
-      {passo && (
-        <BotaoLink href={passo.href} variante={concluido && !pendente ? "primario" : "secundario"}>
-          {passo.rotulo}
-        </BotaoLink>
+      {passo && !pendente && (
+        <Botao onClick={irEmFrente} carregando={indo} variante={pedalou ? "primario" : "secundario"}>
+          {indo ? "Salvando..." : passo.rotulo}
+        </Botao>
       )}
     </div>
   );

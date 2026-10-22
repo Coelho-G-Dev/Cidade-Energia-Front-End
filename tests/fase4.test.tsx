@@ -7,11 +7,13 @@ import { dadosDaPrevia, ESPERA_PREVIA_MS, PainelPrevia } from "@/telas/PreviaSim
 import { TelaLicao } from "@/telas/TelaLicao";
 import type { LicaoDetalhada, TrilhaDetalhada } from "@/types";
 import { definirMovimentoReduzido } from "./setup";
+import { RESULTADO_REFERENCIA } from "./dados";
 
 const api = vi.hoisted(() => ({
   previaSimulacao: vi.fn(),
   obterTrilha: vi.fn(),
   obterLicao: vi.fn(),
+  obterQuiz: vi.fn(async () => ({ licaoId: "l1", licaoConcluida: false, perguntas: [] })),
   listarMissoes: vi.fn(),
 }));
 
@@ -45,12 +47,12 @@ afterEach(() => {
   definirMovimentoReduzido(false);
 });
 
-const RESULTADO = { consumoKwh: 380, gastoMensal: 338, economiaMensal: 34, placas: 6, retornoAnos: 2.3, co2EvitadoKgAno: 191, pesos: [] };
+
 
 describe("prévia do simulador", () => {
   beforeEach(() => {
     api.previaSimulacao.mockReset();
-    api.previaSimulacao.mockResolvedValue({ ...RESULTADO, simulacaoId: null, pontosGanhos: 0, conquistasNovas: [] });
+    api.previaSimulacao.mockResolvedValue(RESULTADO_REFERENCIA);
   });
 
   it("só manda o que o back aceitaria", () => {
@@ -71,7 +73,7 @@ describe("prévia do simulador", () => {
     expect(api.previaSimulacao).toHaveBeenCalledTimes(1);
     expect(api.previaSimulacao.mock.calls[0]?.[0]).toEqual({ modo: "conta", consumoKwh: 380 });
     expect(screen.getByText("Valores estimados")).toBeInTheDocument();
-    expect(screen.getByText("Prévia: gasto de cerca de R$ 338 por mês.")).toBeInTheDocument();
+    expect(screen.getByText("Prévia: gasto de cerca de R$ 312,00 por mês.")).toBeInTheDocument();
   });
 
   it("sem dados não chama o back", async () => {

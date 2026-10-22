@@ -13,6 +13,7 @@ import { api, ErroApi, mensagemParaPessoa } from "@/lib/api";
 import { juntar } from "@/lib/classes";
 import { dataCurta, limparMarcadores } from "@/lib/conteudo";
 import { unidadeDaMissao } from "@/lib/missoesDasTrilhas";
+import { invalidar } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
 import type { Missao } from "@/types";
 
@@ -41,6 +42,7 @@ export function TelaMissao({ missaoId }: { missaoId: string }) {
     setErro(null);
     try {
       const registro = await api.registrarMissao(missao.id);
+      invalidar("missoes", "resumo");
       setAtualizada({
         ...missao,
         diasRegistrados: registro.diasRegistrados,

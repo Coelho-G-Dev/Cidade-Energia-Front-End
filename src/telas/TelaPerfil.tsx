@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AzulejoConquista } from "@/components/app/Celebracao";
+import { AzulejoConquista, useAvisarConquistasNovas } from "@/components/app/Celebracao";
 import { Carregando, EstadoErro } from "@/components/app/Estados";
 import { BotaoLink } from "@/components/ui/Botao";
 import { Card } from "@/components/ui/Card";
@@ -16,14 +16,25 @@ import type { ConquistaDoResumo, Perfil, ResumoPerfil } from "@/types";
 // Conquistas que já viraram nesta visita (só na memória da página).
 const jaViradas = new Set<string>();
 
-export function fraseDoRanking(perfil: Perfil, resumo: ResumoPerfil, nomeEscola?: string, nomeBairro?: string): string | null {
-  if (perfil.escola_verificada && nomeEscola && resumo.escola?.posicao) {
-    return `Seus pontos ajudam a ${nomeEscola} a ficar em ${resumo.escola.posicao}º lugar no ranking das escolas.`;
+// O back só põe no ranking o bairro ou a escola com pelo menos 3 estudantes com pontos. Antes disso,
+// o resumo traz { posicao: null, pontos: 0 }, e a tela diz que ainda não entrou, nunca "0 pontos".
+export function frasesDoRanking(perfil: Perfil, resumo: ResumoPerfil, nomeEscola?: string, nomeBairro?: string): string[] {
+  const frases: string[] = [];
+  if (perfil.bairro_id && resumo.bairro) {
+    frases.push(
+      resumo.bairro.posicao
+        ? `Seus pontos ajudam o bairro ${nomeBairro ?? "seu bairro"} a ficar em ${resumo.bairro.posicao}º lugar no ranking dos bairros.`
+        : "Seu bairro ainda não entrou no ranking. Ele aparece quando 3 estudantes do bairro tiverem pontos.",
+    );
   }
-  if (nomeBairro && resumo.bairro?.posicao) {
-    return `Seus pontos ajudam o bairro ${nomeBairro} a ficar em ${resumo.bairro.posicao}º lugar no ranking dos bairros.`;
+  if (perfil.escola_id && perfil.escola_verificada && resumo.escola) {
+    frases.push(
+      resumo.escola.posicao
+        ? `Seus pontos ajudam a ${nomeEscola ?? "sua escola"} a ficar em ${resumo.escola.posicao}º lugar no ranking das escolas.`
+        : "Sua escola ainda não entrou no ranking. Ela aparece quando 3 estudantes que entraram pelo código da turma tiverem pontos.",
+    );
   }
-  return null;
+  return frases;
 }
 
 function Conquista({ conquista }: { conquista: ConquistaDoResumo }) {
@@ -56,8 +67,11 @@ function Conquista({ conquista }: { conquista: ConquistaDoResumo }) {
 export function TelaPerfil() {
   const perfil = useDados("perfil", () => api.obterPerfil());
   const resumo = useDados("resumo", () => api.obterResumo());
+  useAvisarConquistasNovas(resumo.estado === "pronto" ? resumo.dados.conquistas : undefined);
   const bairros = useDados("bairros", () => api.listarBairros());
-  const escolas = useDados("escolas", () => api.listarEscolas());
+  const bairroId = perfil.estado === "pronto" ? perfil.dados.bairro_id : null;
+  // As escolas vêm sempre filtradas pelo bairro: sem o filtro seriam mais de 500.
+  const escolas = useDados(bairroId && perfil.estado === "pronto" && perfil.dados.escola_id ? `escolas-${bairroId}` : null, () => api.listarEscolas(bairroId!));
 
   const erro = perfil.estado === "erro" ? perfil : resumo.estado === "erro" ? resumo : null;
   const nomeBairro = bairros.estado === "pronto" && perfil.estado === "pronto" ? bairros.dados.find((b) => b.id === perfil.dados.bairro_id)?.nome : undefined;
@@ -121,16 +135,24 @@ export function TelaPerfil() {
             ))}
           </ul>
 
-          {(() => {
-            const frase = fraseDoRanking(perfil.dados, resumo.dados, nomeEscola, nomeBairro);
-            return frase ? (
-              <p className="rounded-cartao bg-primaria-suave px-4 py-3 text-sm font-semibold text-primaria">{frase}</p>
-            ) : null;
-          })()}
+          {frasesDoRanking(perfil.dados, resumo.dados, nomeEscola, nomeBairro).map((frase) => (
+            <p key={frase} className="rounded-cartao bg-primaria-suave px-4 py-3 text-sm font-semibold text-primaria">
+              {frase}
+            </p>
+          ))}
+          {perfil.dados.tem_perfil && !perfil.dados.escola_id && (
+            <Card tom="destaque" sombra={false} className="flex flex-col items-start gap-1">
+              <span className="font-bold">Informe a sua escola</span>
+              <span className="text-sm">Com o código da turma, seus pontos também somam para a sua escola no ranking.</span>
+              <Link href="/entrar" className="flex min-h-11 items-center font-bold text-tinta underline underline-offset-2">
+                Escolher a minha escola
+              </Link>
+            </Card>
+          )}
           {perfil.dados.tem_perfil && perfil.dados.escola_id && !perfil.dados.escola_verificada && (
             <Card tom="destaque" sombra={false} className="flex flex-col items-start gap-1">
               <span className="font-bold">Seus pontos ainda não contam para a sua escola</span>
-              <span className="text-sm">Você escolheu a escola da lista. Com o código da turma, seus pontos passam a somar para ela.</span>
+              <span className="text-sm">Você escolheu a escola da lista. Só quem entra pelo código da turma soma pontos para a escola. Peça o código ao seu professor.</span>
               <Link href="/entrar" className="flex min-h-11 items-center font-bold text-tinta underline underline-offset-2">
                 Adicionar o código da turma
               </Link>

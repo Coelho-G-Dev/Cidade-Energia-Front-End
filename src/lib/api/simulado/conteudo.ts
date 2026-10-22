@@ -57,19 +57,19 @@ export const ESCOLAS: (Escola & { codigo_turma: string })[] = [
     "id": "0e000000-0000-4000-8000-000000000013",
     "nome": "Escola Estadual Sol Nascente (fictícia)",
     "bairro_id": "0b000000-0000-4000-8000-000000000001",
-    "codigo_turma": "SOL2026"
+    "codigo_turma": "TESTE2AB"
   },
   {
     "id": "0e000000-0000-4000-8000-000000000014",
     "nome": "Centro de Ensino Vento Norte (fictícia)",
     "bairro_id": "0b000000-0000-4000-8000-000000000004",
-    "codigo_turma": "VENTO26"
+    "codigo_turma": "TESTE3CD"
   },
   {
     "id": "0e000000-0000-4000-8000-000000000015",
     "nome": "Escola Municipal Raio de Luz (fictícia)",
     "bairro_id": "0b000000-0000-4000-8000-000000000005",
-    "codigo_turma": "LUZ2026"
+    "codigo_turma": "TESTE4EF"
   }
 ];
 

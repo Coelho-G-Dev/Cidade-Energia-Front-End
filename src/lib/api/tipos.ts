@@ -28,7 +28,8 @@ import type {
 
 export type ClienteApi = {
   listarBairros(): Promise<Bairro[]>;
-  listarEscolas(bairroId?: string): Promise<Escola[]>;
+  /** Sempre por bairro: a lista completa tem mais de 500 escolas. */
+  listarEscolas(bairroId: string): Promise<Escola[]>;
   listarAparelhos(): Promise<Aparelho[]>;
   obterPerfil(): Promise<Perfil>;
   atualizarPerfil(dados: AtualizarPerfil): Promise<Perfil>;

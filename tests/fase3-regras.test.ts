@@ -3,8 +3,8 @@ import { diaEHora } from "@/lib/conteudo";
 import { passoDepoisDaLicao, progressoDaMissao } from "@/lib/missoesDasTrilhas";
 import { validarPerfil } from "@/telas/TelaEntrar";
 import { METAS, perderWatts, pessoasPedalando, somarPedalada, WATTS_MAXIMO } from "@/telas/TelaPedale";
-import { fraseDoRanking } from "@/telas/TelaPerfil";
-import { situacaoInicial, textoNovaTentativa } from "@/telas/TelaQuiz";
+import { frasesDoRanking } from "@/telas/TelaPerfil";
+import { estadoDaOpcao, seloDaPergunta, situacaoDaResposta } from "@/telas/TelaQuiz";
 import { filtrarTrilhas } from "@/telas/TelaTrilhas";
 import type { Missao, Perfil, PerguntaDoQuiz, ResumoPerfil, ResumoTrilha } from "@/types";
 
@@ -23,12 +23,16 @@ describe("perfil no Entrar", () => {
     expect(validarPerfil({ ...base, nome: "Ana Maria" }, null).erros.nome).toBe("Informe só o primeiro nome, sem espaços ou números.");
   });
 
-  it("manda o código da turma em maiúsculas", () => {
-    expect(validarPerfil({ ...base, codigo: "sol2026" }, null).dados).toEqual({ primeiro_nome: "Ana", bairro_id: BAIRRO, codigo_turma: "SOL2026" });
+  it("manda o código da turma em maiúsculas, sem espaços", () => {
+    expect(validarPerfil({ ...base, codigo: "k7m2 q9xa" }, null).dados).toEqual({ primeiro_nome: "Ana", bairro_id: BAIRRO, codigo_turma: "K7M2Q9XA" });
   });
 
-  it("explica o formato do código inválido", () => {
-    expect(validarPerfil({ ...base, codigo: "AB" }, null).erros.codigo).toBe("O código tem de 4 a 12 letras ou números, sem espaços.");
+  it("aceita só 8 letras e números, sem 0, O, 1 e I", () => {
+    const mensagem = "O código tem 8 letras e números, sem 0, O, 1 e I. Confira com o seu professor.";
+    for (const codigo of ["AB", "K7M2Q9X", "K7M2Q9XAB", "K7M2Q9X0", "K7M2Q9XO", "K7M2Q9X1", "K7M2Q9XI", "K7M2-Q9X!"]) {
+      expect(validarPerfil({ ...base, codigo }, null).erros.codigo).toBe(mensagem);
+    }
+    expect(validarPerfil({ ...base, codigo: "TESTE2AB" }, null).erros.codigo).toBeUndefined();
   });
 
   it("escola da lista vai como escola_id", () => {
@@ -61,21 +65,36 @@ describe("Pedale", () => {
 });
 
 describe("quiz", () => {
-  const pergunta: PerguntaDoQuiz = { id: "p", ordem: 1, enunciado: "?", opcoes: ["a", "b"], jaRespondida: false, acertou: null, podePontuar: true, proximaTentativaEm: null };
+  const pergunta: PerguntaDoQuiz = { id: "p", ordem: 1, enunciado: "?", opcoes: ["a", "b", "c"], jaRespondida: false, acertou: null, podePontuar: true };
+  const resposta = { correta: false, opcaoCorreta: 2, explicacao: "Porque sim.", tentativaPontuavel: true, pontosGanhos: 0, conquistasNovas: [] };
 
-  it("bloqueia a pergunta errada até a nova tentativa", () => {
-    expect(situacaoInicial(pergunta)).toEqual({ tipo: "aberta" });
-    expect(situacaoInicial({ ...pergunta, jaRespondida: true, acertou: false, podePontuar: false, proximaTentativaEm: "2026-10-18T15:30:00Z" })).toEqual({
-      tipo: "bloqueada",
-      liberaEm: "2026-10-18T15:30:00Z",
-    });
-    expect(situacaoInicial({ ...pergunta, jaRespondida: true, acertou: true, podePontuar: false })).toEqual({ tipo: "aberta" });
+  it("no erro, destaca a escolhida como errada e a certa como certa", () => {
+    const situacao = situacaoDaResposta(0, resposta);
+    expect([0, 1, 2].map((i) => estadoDaOpcao(situacao, i))).toEqual(["errada", "normal", "certa"]);
+    expect(estadoDaOpcao({ tipo: "aberta" }, 2)).toBe("normal");
   });
 
-  it("diz quando dá para tentar de novo no horário de São Luís", () => {
+  it("no acerto, só a escolhida fica certa", () => {
+    const situacao = situacaoDaResposta(2, { ...resposta, correta: true });
+    expect([0, 1, 2].map((i) => estadoDaOpcao(situacao, i))).toEqual(["normal", "normal", "certa"]);
+  });
+
+  it("marca o treino quando a tentativa não vale pontos", () => {
+    expect(situacaoDaResposta(0, resposta)).toMatchObject({ treino: false });
+    expect(situacaoDaResposta(0, { ...resposta, tentativaPontuavel: false })).toMatchObject({ treino: true });
+  });
+
+  it("diz se a pergunta vale pontos ou já foi respondida", () => {
+    expect(seloDaPergunta(pergunta, false)).toBe("Vale pontos");
+    expect(seloDaPergunta({ ...pergunta, jaRespondida: true, acertou: false, podePontuar: false }, false)).toBe("Já respondida");
+    expect(seloDaPergunta(pergunta, true)).toBe("Já respondida");
+    expect(seloDaPergunta({ ...pergunta, podePontuar: false }, false)).toBeNull();
+  });
+});
+
+describe("datas", () => {
+  it("mostra dia e hora no horário de São Luís", () => {
     expect(diaEHora("2026-10-18T15:30:00Z")).toBe("18/10 às 12:30");
-    expect(textoNovaTentativa("2026-10-18T15:30:00Z")).toBe("Você poderá tentar de novo a partir de 18/10 às 12:30.");
-    expect(textoNovaTentativa(null)).toBe("Você poderá tentar de novo amanhã.");
   });
 });
 
@@ -109,15 +128,29 @@ describe("trilhas e missões", () => {
   });
 });
 
-describe("frase do ranking no perfil", () => {
-  const perfil = { escola_verificada: true } as Perfil;
+describe("frases do ranking no perfil", () => {
+  const perfil = { bairro_id: BAIRRO, escola_id: ESCOLA, escola_verificada: true } as Perfil;
   const resumo = { escola: { posicao: 1, pontos: 10 }, bairro: { posicao: 3, pontos: 10 } } as ResumoPerfil;
 
-  it("fala da escola só quando ela foi confirmada pelo código", () => {
-    expect(fraseDoRanking(perfil, resumo, "Escola Sol", "Cohama")).toBe("Seus pontos ajudam a Escola Sol a ficar em 1º lugar no ranking das escolas.");
-    expect(fraseDoRanking({ ...perfil, escola_verificada: false }, resumo, "Escola Sol", "Cohama")).toBe(
+  it("mostra a posição do bairro e da escola confirmada pelo código", () => {
+    expect(frasesDoRanking(perfil, resumo, "Escola Sol", "Cohama")).toEqual([
       "Seus pontos ajudam o bairro Cohama a ficar em 3º lugar no ranking dos bairros.",
-    );
-    expect(fraseDoRanking({ ...perfil, escola_verificada: false }, { ...resumo, bairro: { posicao: null, pontos: 0 } }, undefined, "Cohama")).toBeNull();
+      "Seus pontos ajudam a Escola Sol a ficar em 1º lugar no ranking das escolas.",
+    ]);
+    expect(frasesDoRanking({ ...perfil, escola_verificada: false }, resumo, "Escola Sol", "Cohama")).toEqual([
+      "Seus pontos ajudam o bairro Cohama a ficar em 3º lugar no ranking dos bairros.",
+    ]);
+  });
+
+  it("sem posição, diz que ainda não entrou no ranking, nunca 0 pontos", () => {
+    const fora = { escola: { posicao: null, pontos: 0 }, bairro: { posicao: null, pontos: 0 } } as ResumoPerfil;
+    const frases = frasesDoRanking(perfil, fora, "Escola Sol", "Cohama");
+    expect(frases[0]).toMatch(/^Seu bairro ainda não entrou no ranking/);
+    expect(frases[1]).toMatch(/^Sua escola ainda não entrou no ranking/);
+    expect(frases.join(" ")).not.toMatch(/0 pontos/);
+  });
+
+  it("sem escola, fala só do bairro", () => {
+    expect(frasesDoRanking({ ...perfil, escola_id: null }, { ...resumo, escola: null }, undefined, "Cohama")).toHaveLength(1);
   });
 });

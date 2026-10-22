@@ -42,7 +42,7 @@ export function CascaSimulador({ children }: { children: ReactNode }) {
             />
             {children}
           </div>
-          {desktop && <PainelPrevia dados={preenchido[modo]} />}
+          {desktop && <PainelPrevia dados={preenchido[modo]} lateral />}
         </div>
       </div>
     </ProvedorPrevia>

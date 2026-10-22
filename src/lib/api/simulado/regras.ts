@@ -2,7 +2,6 @@
 import type { SlugConquista } from "@/types";
 
 export const FUSO_SAO_LUIS = "America/Fortaleza";
-export const HORAS_ENTRE_TENTATIVAS_QUIZ = 24;
 export const PONTOS_BAIRRO_UNIDO = 500;
 export const TRILHA_ENERGIA_SOLAR = "energia-solar-em-sao-luis";
 export const TRILHA_CONTA_DE_LUZ = "entendendo-a-sua-conta-de-luz";
@@ -35,18 +34,11 @@ export function conquistasMerecidas(r: RetratoUsuario): SlugConquista[] {
   return (Object.keys(regras) as SlugConquista[]).filter((slug) => regras[slug]);
 }
 
-export type RespostaAnterior = { correta: boolean; tentativaEm: Date } | null;
-export type DecisaoTentativa = { pontuavel: boolean; proximaTentativaEm: Date | null };
+export type RespostaAnterior = { correta: boolean } | null;
 
-const MS_POR_HORA = 3_600_000;
-
-export function avaliarTentativa(anterior: RespostaAnterior, agora: Date): DecisaoTentativa {
-  if (!anterior) return { pontuavel: true, proximaTentativaEm: null };
-  if (anterior.correta) return { pontuavel: false, proximaTentativaEm: null };
-  const liberadaEm = new Date(anterior.tentativaEm.getTime() + HORAS_ENTRE_TENTATIVAS_QUIZ * MS_POR_HORA);
-  return agora >= liberadaEm
-    ? { pontuavel: true, proximaTentativaEm: null }
-    : { pontuavel: false, proximaTentativaEm: liberadaEm };
+// Só a primeira tentativa de cada pergunta vale pontos; as seguintes são treino.
+export function tentativaPontuavel(anterior: RespostaAnterior): boolean {
+  return anterior === null;
 }
 
 const formatoDia = new Intl.DateTimeFormat("en-CA", {

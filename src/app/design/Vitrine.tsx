@@ -322,7 +322,7 @@ export function Vitrine() {
             <div className="flex flex-col gap-4">
               <CampoTexto rotulo="Consumo do mês" grande sufixo="kWh por mês" inputMode="decimal" defaultValue="380" />
               <CampoTexto rotulo="Valor da conta (opcional)" inputMode="decimal" placeholder="R$ 0,00" />
-              <CampoTexto rotulo="Código da turma" disabled value="SOL2026" readOnly />
+              <CampoTexto rotulo="Código da turma" disabled value="TESTE2AB" readOnly />
             </div>
           </div>
         </Secao>

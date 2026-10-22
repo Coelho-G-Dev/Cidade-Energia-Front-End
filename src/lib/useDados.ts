@@ -1,40 +1,45 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { assinar, carregar, invalidar, lerEntrada, precisaBuscar, type Entrada } from "./cacheDados";
 
 export type EstadoDados<T> =
   | { estado: "carregando"; dados: undefined; erro: undefined }
   | { estado: "pronto"; dados: T; erro: undefined }
   | { estado: "erro"; dados: undefined; erro: unknown };
 
-type Resultado<T> = { chave: string; dados?: T; erro?: unknown; falhou: boolean };
+const nadaParaOuvir = () => () => {};
 
+/**
+ * Lê um recurso da API pelo cache compartilhado (ver `cacheDados.ts`). A mesma chave em telas diferentes usa os
+ * mesmos dados e a mesma chamada. Depois de um erro, só busca de novo quando a pessoa pede (`recarregar`) ou
+ * quando a tela monta outra vez: nunca em laço.
+ */
 export function useDados<T>(chave: string | null, buscar: () => Promise<T>): EstadoDados<T> & { recarregar: () => void } {
-  const [resultado, setResultado] = useState<Resultado<T> | null>(null);
-  const [versao, setVersao] = useState(0);
   const funcao = useRef(buscar);
-
   useEffect(() => {
     funcao.current = buscar;
   });
 
-  const atual = chave === null ? null : `${chave}#${versao}`;
+  const ouvir = useCallback((avisar: () => void) => (chave === null ? () => {} : assinar(chave, avisar)), [chave]);
+  const entrada = useSyncExternalStore(
+    chave === null ? nadaParaOuvir : ouvir,
+    () => (chave === null ? undefined : lerEntrada<T>(chave)),
+    () => undefined,
+  ) as Entrada<T> | undefined;
 
   useEffect(() => {
-    if (atual === null) return;
-    let ativo = true;
-    funcao.current().then(
-      (dados) => ativo && setResultado({ chave: atual, dados, falhou: false }),
-      (erro: unknown) => ativo && setResultado({ chave: atual, erro, falhou: true }),
-    );
-    return () => {
-      ativo = false;
-    };
-  }, [atual]);
+    if (chave === null || !precisaBuscar(lerEntrada(chave))) return;
+    carregar(chave, () => funcao.current()).catch(() => {});
+  }, [chave]);
 
-  const recarregar = useCallback(() => setVersao((v) => v + 1), []);
+  const recarregar = useCallback(() => {
+    if (chave === null) return;
+    invalidar(chave);
+    carregar(chave, () => funcao.current()).catch(() => {});
+  }, [chave]);
 
-  if (!resultado || resultado.chave !== atual) return { estado: "carregando", dados: undefined, erro: undefined, recarregar };
-  if (resultado.falhou) return { estado: "erro", dados: undefined, erro: resultado.erro, recarregar };
-  return { estado: "pronto", dados: resultado.dados as T, erro: undefined, recarregar };
+  if (entrada?.dados !== undefined && !entrada.falhou) return { estado: "pronto", dados: entrada.dados, erro: undefined, recarregar };
+  if (entrada?.falhou && !entrada.carregando) return { estado: "erro", dados: undefined, erro: entrada.erro, recarregar };
+  return { estado: "carregando", dados: undefined, erro: undefined, recarregar };
 }

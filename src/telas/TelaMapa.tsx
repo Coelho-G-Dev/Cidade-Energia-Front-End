@@ -30,6 +30,19 @@ export const TIPOS: Record<TipoPontoMapa, { rotulo: string; tom: "destaque" | "s
 
 const ORDEM_TIPOS = Object.keys(TIPOS) as TipoPontoMapa[];
 
+// O back só mostra quem tem pelo menos 3 estudantes com pontos, para a soma não revelar os pontos de ninguém.
+export const VAZIO_RANKING: Record<TipoRanking, { titulo: string; texto: string }> = {
+  bairros: {
+    titulo: "O ranking ainda não começou",
+    texto: "O ranking aparece quando 3 estudantes do bairro tiverem pontos. Chame os colegas!",
+  },
+  escolas: {
+    titulo: "O ranking ainda não começou",
+    texto:
+      "O ranking aparece quando 3 estudantes da escola tiverem pontos. Só contam os pontos de quem entrou pelo código da turma. Chame os colegas!",
+  },
+};
+
 export function TelaMapa() {
   const poucoMovimento = usePoucoMovimento();
   const pontos = useDados("pontos-mapa", () => api.listarPontosMapa());
@@ -174,7 +187,7 @@ export function TelaMapa() {
           {ranking.estado === "erro" && <EstadoErro erro={ranking.erro} onTentarDeNovo={ranking.recarregar} />}
           {ranking.estado === "pronto" &&
             (ranking.dados.length === 0 ? (
-              <EstadoVazio titulo="Ninguém pontuou ainda" texto="Faça uma lição e coloque o seu bairro no ranking." />
+              <EstadoVazio icone="grupo" {...VAZIO_RANKING[tipo]} />
             ) : (
               <ol className="flex flex-col">
                 {ranking.dados.map((item) => (

@@ -17,6 +17,7 @@ import { Topo } from "@/components/ui/Topo";
 import { api, ErroApi, mensagemParaPessoa } from "@/lib/api";
 import { passoDepoisDaLicao } from "@/lib/missoesDasTrilhas";
 import { MOLA_CURTA } from "@/lib/movimento";
+import { AFETADAS_POR_LICAO, invalidar, preCarregar } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
 import { DESKTOP, useMidia } from "@/lib/useMidia";
 import { useTemSessao } from "@/lib/useTemSessao";
@@ -63,6 +64,14 @@ export function TelaLicao({ slug, licaoId }: Props) {
 
   const erroCarga = trilha.estado === "erro" ? trilha : licao.estado === "erro" ? licao : null;
   const passo = licao.estado === "pronto" ? destino(licao.dados, missoes.estado === "pronto" ? missoes.dados : null) : null;
+  // Enquanto a pessoa lê, a próxima lição e o quiz já vêm do back.
+  const proxima = licao.estado === "pronto" ? licao.dados.proximaLicaoId : null;
+  const comQuiz = licao.estado === "pronto" && licao.dados.totalPerguntas > 0 ? licao.dados.id : null;
+  useEffect(() => {
+    if (proxima) preCarregar(`licao-${proxima}`, () => api.obterLicao(proxima));
+    if (comQuiz) preCarregar(`quiz-${comQuiz}`, () => api.obterQuiz(comQuiz));
+  }, [proxima, comQuiz]);
+
   // Sem login nada é salvo, então a ordem das lições só vale para quem entrou.
   const pendente = licao.estado === "pronto" && temSessao ? licao.dados.licaoPendente : null;
 
@@ -74,6 +83,7 @@ export function TelaLicao({ slug, licaoId }: Props) {
     setErro(null);
     try {
       celebrar(await api.concluirLicao(licao.dados.id), botao);
+      invalidar(...AFETADAS_POR_LICAO);
       router.push(passo.href);
     } catch (e) {
       // Sem login a lição pode ser lida, mas não salva: segue em frente sem pontos.

@@ -7,6 +7,7 @@ import { guardarResultado, lerResultado } from "@/lib/resultado";
 import { useDados } from "@/lib/useDados";
 import { descreverHoras } from "@/telas/TelaSimuladorAparelhos";
 import { paraNumero } from "@/telas/TelaSimuladorConta";
+import { RESULTADO_REFERENCIA } from "./dados";
 
 describe("useDados", () => {
   it("passa de carregando para pronto", async () => {
@@ -106,7 +107,7 @@ describe("apoio das telas", () => {
   });
 
   it("guarda o resultado só na memória", () => {
-    const resultado = { consumoKwh: 1, gastoMensal: 1, economiaMensal: 1, placas: 1, retornoAnos: 1, co2EvitadoKgAno: 1, pesos: [], simulacaoId: null, pontosGanhos: 0, conquistasNovas: [] };
+    const resultado = { ...RESULTADO_REFERENCIA };
     guardarResultado(resultado);
     expect(lerResultado()).toBe(resultado);
     expect(window.localStorage.length).toBe(0);

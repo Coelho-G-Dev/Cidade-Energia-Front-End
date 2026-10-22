@@ -6,11 +6,12 @@ import { Turnstile, turnstileLigado } from "@/components/app/Turnstile";
 import { Botao } from "@/components/ui/Botao";
 import { MensagemErro } from "@/components/ui/Campo";
 import { CampoTexto } from "@/components/ui/CampoTexto";
-import { Seletor } from "@/components/ui/Seletor";
+import { SeletorBusca } from "@/components/ui/SeletorBusca";
 import { SeletorDuplo } from "@/components/ui/SeletorDuplo";
 import { Topo } from "@/components/ui/Topo";
 import { api, campoDoErro, ErroApi, mensagemParaPessoa, sessao } from "@/lib/api";
 import { diaEHora } from "@/lib/conteudo";
+import { invalidar, limparCache } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
 import { atualizarPerfilSchema } from "@/lib/validacao/perfil";
 import type { AtualizarPerfil, Perfil } from "@/types";
@@ -26,13 +27,20 @@ const CAMPO_DO_SERVIDOR: Record<string, Campo> = {
   escola_id: "escola",
 };
 
+// Os códigos de turma têm 8 letras e números, sem 0, O, 1 e I (para não confundir na hora de digitar).
+export const FORMATO_CODIGO_TURMA = /^[A-HJ-NP-Z2-9]{8}$/;
+export const MENSAGEM_CODIGO_TURMA = "O código tem 8 letras e números, sem 0, O, 1 e I. Confira com o seu professor.";
+export const normalizarCodigo = (codigo: string) => codigo.replace(/[\s-]/g, "").toUpperCase();
+
 export function validarPerfil(entrada: { nome: string; bairro: string; modo: ModoEscola; codigo: string; escola: string }, manterEscola: string | null) {
   const erros: Erros = {};
   if (!entrada.nome.trim()) erros.nome = "Escreva o seu primeiro nome.";
   if (!entrada.bairro) erros.bairro = "Escolha o seu bairro.";
 
   const dados: AtualizarPerfil = { primeiro_nome: entrada.nome.trim(), bairro_id: entrada.bairro };
-  if (entrada.modo === "codigo" && entrada.codigo.trim()) dados.codigo_turma = entrada.codigo.trim().toUpperCase();
+  const codigo = normalizarCodigo(entrada.codigo);
+  if (entrada.modo === "codigo" && codigo && !FORMATO_CODIGO_TURMA.test(codigo)) erros.codigo = MENSAGEM_CODIGO_TURMA;
+  if (entrada.modo === "codigo" && codigo) dados.codigo_turma = codigo;
   else if (entrada.modo === "lista" && entrada.escola) dados.escola_id = entrada.escola;
   else if (entrada.modo === "codigo" && manterEscola) dados.escola_id = manterEscola;
 
@@ -41,7 +49,7 @@ export function validarPerfil(entrada: { nome: string; bairro: string; modo: Mod
     for (const problema of resultado.error.issues) {
       const campo = CAMPO_DO_SERVIDOR[String(problema.path[0])] ?? "geral";
       if (erros[campo]) continue;
-      erros[campo] = campo === "codigo" ? "O código tem de 4 a 12 letras ou números, sem espaços." : problema.message;
+      erros[campo] = campo === "codigo" ? MENSAGEM_CODIGO_TURMA : problema.message;
     }
   }
   return { erros, dados: Object.keys(erros).length ? null : (resultado.data ?? null) };
@@ -101,6 +109,8 @@ export function TelaEntrar() {
   async function entrar(): Promise<boolean> {
     try {
       await sessao.entrarAnonimo(captcha);
+      // Sessão nova: o que foi lido antes, sem login, veio com o progresso zerado.
+      if (!temSessao) limparCache();
       setTemSessao(true);
       return true;
     } catch (e) {
@@ -122,8 +132,18 @@ export function TelaEntrar() {
     if (!(await entrar())) return setEnviando(null);
     try {
       await api.atualizarPerfil(dados);
+      invalidar("perfil", "resumo", "ranking-");
       router.push(editando ? "/perfil" : "/inicio");
     } catch (e) {
+      if (e instanceof ErroApi && e.codigo === "ESCOLA_INATIVA") {
+        // A escola saiu da lista: busca as escolas do bairro de novo e pede outra.
+        setModo("lista");
+        setEscola("");
+        escolas.recarregar();
+        setErros({ escola: mensagemParaPessoa(e) });
+        setTentativa((t) => t + 1);
+        return setEnviando(null);
+      }
       const campo = e instanceof ErroApi && e.codigo === "TURMA_NAO_ENCONTRADA" ? "codigo" : (CAMPO_DO_SERVIDOR[campoDoErro(e) ?? ""] ?? "geral");
       const mensagem = campo === "codigo" && e instanceof ErroApi && e.codigo === "TURMA_NAO_ENCONTRADA" ? "Não encontramos uma turma com esse código. Confira com o seu professor." : mensagemParaPessoa(e);
       setErros({ [campo]: mensagem });
@@ -162,14 +182,15 @@ export function TelaEntrar() {
           erro={erros.nome}
           tentativa={tentativa}
         />
-        <Seletor
+        <SeletorBusca
           rotulo="Seu bairro"
-          textoVazio={bairros.estado === "carregando" ? "Carregando os bairros..." : "Escolha seu bairro"}
+          nomeDosItens="bairros"
+          placeholder={bairros.estado === "carregando" ? "Carregando os bairros..." : "Digite para buscar o seu bairro"}
           opcoes={opcoesBairro}
-          value={bairro}
-          onChange={(e) => {
-            setBairro(e.target.value);
-            setEscola("");
+          valor={bairro}
+          onEscolher={(novo) => {
+            if (novo !== bairro) setEscola("");
+            setBairro(novo);
           }}
           erro={erros.bairro ?? (bairros.estado === "erro" ? "Não deu para carregar os bairros. Recarregue a página." : undefined)}
           tentativa={tentativa}
@@ -192,13 +213,13 @@ export function TelaEntrar() {
           {modo === "codigo" ? (
             <CampoTexto
               rotulo="Código da turma"
-              placeholder="Ex.: SOL7A"
+              placeholder="8 letras e números"
               autoCapitalize="characters"
               autoComplete="off"
               spellCheck={false}
               maxLength={12}
               value={codigo}
-              onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+              onChange={(e) => setCodigo(normalizarCodigo(e.target.value))}
               dica={
                 escolaVerificada && !codigo
                   ? "Sua escola já está confirmada. Deixe em branco para manter."
@@ -208,13 +229,14 @@ export function TelaEntrar() {
               tentativa={tentativa}
             />
           ) : (
-            <Seletor
+            <SeletorBusca
               rotulo="Escola"
-              textoVazio={!bairro ? "Escolha o bairro primeiro" : escolas.estado === "carregando" ? "Carregando as escolas..." : "Escolha sua escola"}
+              nomeDosItens="escolas"
+              placeholder={!bairro ? "Escolha o bairro primeiro" : escolas.estado === "carregando" ? "Carregando as escolas..." : "Digite para buscar a sua escola"}
               opcoes={opcoesEscola}
               disabled={!bairro}
-              value={escola}
-              onChange={(e) => setEscola(e.target.value)}
+              valor={escola}
+              onEscolher={setEscola}
               dica={
                 escolas.estado === "pronto" && escolas.dados.length === 0
                   ? "Ainda não há escolas deste bairro na lista. Use o código da turma."

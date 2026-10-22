@@ -48,7 +48,7 @@ describe("cliente real segue o contrato", () => {
 
   it("atualizar o perfil usa PUT com o corpo do schema", async () => {
     const { requisitar, api } = montar();
-    const dados = { primeiro_nome: "Ana", bairro_id: "b1", codigo_turma: "SOL2026" };
+    const dados = { primeiro_nome: "Ana", bairro_id: "b1", codigo_turma: "TESTE2AB" };
     await api.atualizarPerfil(dados);
     expect(requisitar.mock.calls[0]).toEqual(["/api/perfil", { metodo: "PUT", corpo: dados, autenticacao: "exigida" }]);
   });

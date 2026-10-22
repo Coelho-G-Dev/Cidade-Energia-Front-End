@@ -22,9 +22,10 @@ vi.mock("@/lib/api", async () => {
   return { ...erro, api, sessao };
 });
 
-const PERGUNTA = { id: "p1", ordem: 1, enunciado: "O que a placa precisa?", opcoes: ["Calor", "Luz do sol"], jaRespondida: false, acertou: null, podePontuar: true, proximaTentativaEm: null };
+const PERGUNTA = { id: "p1", ordem: 1, enunciado: "O que a placa precisa?", opcoes: ["Calor", "Luz do sol"], jaRespondida: false, acertou: null, podePontuar: true };
 
 beforeEach(() => {
+  vi.clearAllMocks();
   sessao.token.mockResolvedValue("token");
   api.obterQuiz.mockResolvedValue({ licaoId: "l1", licaoConcluida: true, perguntas: [PERGUNTA] });
   api.obterLicao.mockResolvedValue({ id: "l1", trilha: { slug: "solar", titulo: "Energia solar" }, proximaLicaoId: "l2", totalPerguntas: 1 });
@@ -32,23 +33,27 @@ beforeEach(() => {
 });
 
 describe("quiz", () => {
-  it("resposta errada avisa quando tentar de novo e não revela a certa", async () => {
-    api.responderQuiz.mockResolvedValue({ correta: false, explicacao: null, tentativaPontuavel: true, proximaTentativaEm: "2026-10-18T15:30:00Z", pontosGanhos: 0, conquistasNovas: [] });
+  it("resposta errada destaca a opção certa e abre a explicação", async () => {
+    api.responderQuiz.mockResolvedValue({ correta: false, opcaoCorreta: 1, explicacao: "A placa usa a luz.", tentativaPontuavel: true, pontosGanhos: 0, conquistasNovas: [] });
     render(
       <ProvedorCelebracao>
         <TelaQuiz licaoId="l1" />
       </ProvedorCelebracao>,
     );
+    expect(await screen.findByText("Vale pontos")).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: "Calor" }));
-    expect(await screen.findByText("Não foi dessa vez.")).toBeInTheDocument();
-    expect(screen.getByText(/a partir de 18\/10 às 12:30/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Calors*Resposta errada/ })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Luz do sol" })).toBeDisabled();
-    expect(screen.queryByText(/Resposta certa/)).not.toBeInTheDocument();
+    expect(await screen.findByText("Não foi dessa vez. A resposta certa é: Luz do sol.")).toBeInTheDocument();
+    expect(screen.getByText("A placa usa a luz.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Calor\s*Resposta errada/ })).toHaveAttribute("aria-pressed", "true");
+    const certa = screen.getByRole("button", { name: /Luz do sol\s*Resposta certa/ });
+    expect(certa).toHaveAttribute("aria-pressed", "false");
+    expect(certa).toBeDisabled();
+    expect(screen.queryByText(/24 horas|tentar de novo a partir/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Treino/)).not.toBeInTheDocument();
   });
 
   it("resposta certa mostra a explicação e anuncia os pontos", async () => {
-    api.responderQuiz.mockResolvedValue({ correta: true, explicacao: "A placa usa a luz.", tentativaPontuavel: true, proximaTentativaEm: null, pontosGanhos: 5, conquistasNovas: [] });
+    api.responderQuiz.mockResolvedValue({ correta: true, opcaoCorreta: 1, explicacao: "A placa usa a luz.", tentativaPontuavel: true, pontosGanhos: 5, conquistasNovas: [] });
     render(
       <ProvedorCelebracao>
         <TelaQuiz licaoId="l1" />
@@ -56,22 +61,53 @@ describe("quiz", () => {
     );
     await userEvent.click(await screen.findByRole("button", { name: "Luz do sol" }));
     expect(await screen.findByText("A placa usa a luz.")).toBeInTheDocument();
+    expect(screen.getByText("Isso mesmo!")).toBeInTheDocument();
     expect(screen.getByText("Você ganhou 5 pontos.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Ver como fui" }));
-    expect(screen.getByText("Você acertou 1 de 1 pergunta.")).toBeInTheDocument();
+    expect(screen.getByText(/Você acertou 1 de 1 pergunta\./)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ir para a próxima lição" })).toHaveAttribute("href", "/trilhas/solar/l2");
   });
 
-  it("antes das 24 horas mostra a mensagem do servidor", async () => {
-    api.responderQuiz.mockRejectedValue(new ErroApi(429, "AGUARDE_NOVA_TENTATIVA", "Você poderá responder esta pergunta de novo a partir de 18/10 às 12:30."));
+  it("responder de novo é treino e a tela diz que não vale pontos", async () => {
+    api.responderQuiz
+      .mockResolvedValueOnce({ correta: false, opcaoCorreta: 1, explicacao: "A placa usa a luz.", tentativaPontuavel: true, pontosGanhos: 0, conquistasNovas: [] })
+      .mockResolvedValueOnce({ correta: true, opcaoCorreta: 1, explicacao: "A placa usa a luz.", tentativaPontuavel: false, pontosGanhos: 0, conquistasNovas: [] });
     render(
       <ProvedorCelebracao>
         <TelaQuiz licaoId="l1" />
       </ProvedorCelebracao>,
     );
     await userEvent.click(await screen.findByRole("button", { name: "Calor" }));
-    expect(await screen.findByText(/responder esta pergunta de novo a partir de 18\/10/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Calor" })).toBeDisabled();
+    await userEvent.click(await screen.findByRole("button", { name: "Responder de novo como treino" }));
+    expect(screen.getByText("Já respondida")).toBeInTheDocument();
+    expect(screen.getByText("Responder de novo é treino: não vale pontos.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Luz do sol" }));
+    expect(await screen.findByText("Treino: esta resposta não vale pontos")).toBeInTheDocument();
+    expect(api.responderQuiz).toHaveBeenCalledTimes(2);
+  });
+
+  it("pergunta já respondida antes aparece como treino", async () => {
+    api.obterQuiz.mockResolvedValue({ licaoId: "l1", licaoConcluida: true, perguntas: [{ ...PERGUNTA, jaRespondida: true, acertou: false, podePontuar: false }] });
+    render(
+      <ProvedorCelebracao>
+        <TelaQuiz licaoId="l1" />
+      </ProvedorCelebracao>,
+    );
+    expect(await screen.findByText("Já respondida")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Calor" })).toBeEnabled();
+  });
+
+  it("com muitas ações seguidas mostra a mensagem e não repete sozinho", async () => {
+    api.responderQuiz.mockRejectedValue(new ErroApi(429, "LIMITE_DE_REQUISICOES", "Muitas ações seguidas. Espere um pouco e tente de novo."));
+    render(
+      <ProvedorCelebracao>
+        <TelaQuiz licaoId="l1" />
+      </ProvedorCelebracao>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Calor" }));
+    expect(await screen.findByText("Muitas ações seguidas. Espere um pouco e tente de novo.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Calor" })).toBeEnabled();
+    expect(api.responderQuiz).toHaveBeenCalledTimes(1);
   });
 
   function renderizarQuiz() {

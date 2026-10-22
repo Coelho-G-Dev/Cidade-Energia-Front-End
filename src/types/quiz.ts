@@ -8,7 +8,6 @@ export type PerguntaDoQuiz = {
   jaRespondida: boolean;
   acertou: boolean | null;
   podePontuar: boolean;
-  proximaTentativaEm: string | null;
 };
 
 export type Quiz = { licaoId: string; licaoConcluida: boolean; perguntas: PerguntaDoQuiz[] };
@@ -17,7 +16,9 @@ export type PedidoResposta = { perguntaId: string; opcao: number };
 
 export type RespostaDoQuiz = ResultadoEvento & {
   correta: boolean;
-  explicacao: string | null;
+  /** Índice da opção certa em `opcoes`. Vem no acerto e no erro. */
+  opcaoCorreta: number;
+  explicacao: string;
+  /** `false` quando a pergunta já tinha sido respondida: é treino, sem pontos. */
   tentativaPontuavel: boolean;
-  proximaTentativaEm: string | null;
 };

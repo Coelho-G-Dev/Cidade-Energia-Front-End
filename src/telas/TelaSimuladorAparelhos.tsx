@@ -9,10 +9,12 @@ import { Icone } from "@/components/ui/Icone";
 import { NumeroRolante } from "@/components/ui/NumeroRolante";
 import { api, mensagemParaPessoa } from "@/lib/api";
 import { numero } from "@/lib/conteudo";
+import { invalidar } from "@/lib/cacheDados";
 import { guardarResultado } from "@/lib/resultado";
 import { useDados } from "@/lib/useDados";
+import { DESKTOP, useMidia } from "@/lib/useMidia";
 import type { Aparelho } from "@/types";
-import { dadosDaPrevia, useInformarPrevia } from "./PreviaSimulacao";
+import { dadosDaPrevia, PainelPrevia, useInformarPrevia } from "./PreviaSimulacao";
 
 export function descreverHoras(horas: number): string {
   if (horas >= 24) return "ligado o dia todo";
@@ -20,24 +22,39 @@ export function descreverHoras(horas: number): string {
   return `${numero(horas)} h por dia`;
 }
 
-const consumoMes = (a: Aparelho, quantidade: number) => (a.potencia_w * a.horas_padrao * 30 * quantidade) / 1000;
+// A tela começa com uma casa de exemplo, que a pessoa ajusta: começar do zero deixava a prévia vazia.
+// O chuveiro entra porque, até o back publicar as dicas de geladeira, TV, lâmpada e ventilador (item 14 de
+// docs/pedidos-ao-backend.md), só ele e o ar-condicionado têm dica de hábito na API: sem um dos dois, "Mudando
+// hábitos" daria zero.
+export const CASA_DE_EXEMPLO: Readonly<Record<string, number>> = { geladeira: 1, lampada_led: 4, tv: 1, chuveiro: 1 };
+
+export function casaDeExemplo(aparelhos: readonly Aparelho[]): Record<string, number> {
+  return Object.fromEntries(aparelhos.filter((a) => CASA_DE_EXEMPLO[a.codigo]).map((a) => [a.id, CASA_DE_EXEMPLO[a.codigo]!]));
+}
 
 export function TelaSimuladorAparelhos() {
   const router = useRouter();
   const aparelhos = useDados("aparelhos", () => api.listarAparelhos());
-  const [quantidades, setQuantidades] = useState<Record<string, number>>({});
+  const desktop = useMidia(DESKTOP);
+  // `null` até a pessoa mexer: aí vale a casa de exemplo.
+  const [editadas, setEditadas] = useState<Record<string, number> | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const lista = aparelhos.estado === "pronto" ? aparelhos.dados : [];
+  const quantidades = editadas ?? casaDeExemplo(lista);
   const qtd = (a: Aparelho) => quantidades[a.id] ?? 0;
-  const estimativa = lista.reduce((soma, a) => soma + consumoMes(a, qtd(a)), 0);
   const escolhidos = lista.filter((a) => qtd(a) > 0);
   const itens = escolhidos.map((a) => ({ aparelhoId: a.id, quantidade: qtd(a), horasDia: a.horas_padrao }));
-  useInformarPrevia("aparelhos", dadosDaPrevia({ modo: "aparelhos", itens }));
+  // O consumo e os valores vêm sempre da prévia do back, para bater com o Resultado.
+  const previa = dadosDaPrevia({ modo: "aparelhos", itens });
+  useInformarPrevia("aparelhos", previa);
 
   function mudar(a: Aparelho, delta: number) {
-    setQuantidades((q) => ({ ...q, [a.id]: Math.min(50, Math.max(0, (q[a.id] ?? 0) + delta)) }));
+    setEditadas((atual) => {
+      const q = atual ?? casaDeExemplo(lista);
+      return { ...q, [a.id]: Math.min(50, Math.max(0, (q[a.id] ?? 0) + delta)) };
+    });
   }
 
   async function verResultado() {
@@ -50,6 +67,7 @@ export function TelaSimuladorAparelhos() {
           itens,
         }),
       );
+      invalidar("ultima-simulacao", "resumo", "ranking-");
       router.push("/resultado");
     } catch (e) {
       setErro(mensagemParaPessoa(e));
@@ -62,6 +80,7 @@ export function TelaSimuladorAparelhos() {
 
   return (
     <div className="flex flex-col gap-4">
+      {editadas === null && <p className="text-pequeno text-apoio">Começamos com uma casa de exemplo. Use + e − para deixar igual à sua.</p>}
       <ul className="flex flex-col rounded-cartao border-2 border-tinta bg-superficie px-4 py-1 shadow-azulejo">
         {lista.map((a) => (
           <li key={a.id} className="flex items-center gap-3 border-b border-trilho py-2.5 last:border-b-0">
@@ -83,15 +102,16 @@ export function TelaSimuladorAparelhos() {
           </li>
         ))}
       </ul>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-pequeno text-apoio">Estimativa</span>
-        <span className="font-titulo text-titulo-3 font-extrabold tabular-nums">≈ {numero(estimativa, 0)} kWh por mês</span>
-      </div>
+      {!desktop && <PainelPrevia dados={previa} />}
       <MensagemErro id="erro-aparelhos" erro={erro} />
       <Botao onClick={verResultado} carregando={enviando} disabled={escolhidos.length === 0}>
         {enviando ? "Calculando..." : "Ver meu resultado"}
       </Botao>
-      {escolhidos.length === 0 && <p className="text-center text-pequeno text-apoio">Toque em + para incluir os aparelhos da sua casa.</p>}
+      {escolhidos.length === 0 && (
+        <p className="text-center text-pequeno font-semibold text-erro" role="status">
+          Adicione pelo menos um aparelho.
+        </p>
+      )}
     </div>
   );
 }

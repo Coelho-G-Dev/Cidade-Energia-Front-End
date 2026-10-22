@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+import { limparCache } from "@/lib/cacheDados";
 
 export function definirMovimentoReduzido(reduzido: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -37,5 +38,7 @@ vi.mock("next/navigation", () => ({
 
 afterEach(() => {
   cleanup();
+  // O cache das leituras vive no módulo: cada teste começa sem dados guardados.
+  limparCache();
   definirMovimentoReduzido(false);
 });

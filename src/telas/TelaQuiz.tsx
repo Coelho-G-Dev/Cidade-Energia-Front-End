@@ -8,48 +8,61 @@ import { BarraProgresso } from "@/components/ui/BarraProgresso";
 import { Botao, BotaoLink } from "@/components/ui/Botao";
 import { MensagemErro } from "@/components/ui/Campo";
 import { CheckDesenhado } from "@/components/ui/CheckDesenhado";
+import { Chip } from "@/components/ui/Chip";
 import { Icone } from "@/components/ui/Icone";
 import { Topo } from "@/components/ui/Topo";
 import { api, ErroApi, mensagemParaPessoa } from "@/lib/api";
 import { juntar } from "@/lib/classes";
-import { diaEHora, limparMarcadores } from "@/lib/conteudo";
+import { limparMarcadores } from "@/lib/conteudo";
 import { passoDepoisDaLicao } from "@/lib/missoesDasTrilhas";
 import { CURVA, DURACAO, usePoucoMovimento } from "@/lib/movimento";
+import { invalidar } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
 import { useTemSessao } from "@/lib/useTemSessao";
-import type { PerguntaDoQuiz } from "@/types";
+import type { PerguntaDoQuiz, RespostaDoQuiz } from "@/types";
 
 type Situacao =
   | { tipo: "aberta" }
-  | { tipo: "certa"; opcao: number; explicacao: string | null }
-  | { tipo: "errada"; opcao: number; liberaEm: string | null }
-  | { tipo: "bloqueada"; liberaEm: string | null; mensagem?: string };
+  | { tipo: "respondida"; opcao: number; correta: boolean; opcaoCorreta: number; explicacao: string; treino: boolean };
 
-// Como a pergunta começa, a partir do que o servidor já sabe das tentativas anteriores.
-export function situacaoInicial(p: PerguntaDoQuiz): Situacao {
-  if (p.jaRespondida && p.acertou === false && p.proximaTentativaEm && !p.podePontuar) return { tipo: "bloqueada", liberaEm: p.proximaTentativaEm };
-  return { tipo: "aberta" };
+type EstadoOpcao = "normal" | "certa" | "errada";
+
+export function situacaoDaResposta(opcao: number, r: RespostaDoQuiz): Situacao {
+  return { tipo: "respondida", opcao, correta: r.correta, opcaoCorreta: r.opcaoCorreta, explicacao: r.explicacao, treino: !r.tentativaPontuavel };
 }
 
-export const textoNovaTentativa = (liberaEm: string | null) =>
-  liberaEm ? `Você poderá tentar de novo a partir de ${diaEHora(liberaEm)}.` : "Você poderá tentar de novo amanhã.";
+/** Depois de responder, a opção certa aparece sempre; a escolhida, se errada, fica com a borda de erro. */
+export function estadoDaOpcao(situacao: Situacao, indice: number): EstadoOpcao {
+  if (situacao.tipo !== "respondida") return "normal";
+  if (indice === situacao.opcaoCorreta) return "certa";
+  if (indice === situacao.opcao) return "errada";
+  return "normal";
+}
+
+/** "Vale pontos" antes da primeira tentativa; "Já respondida" depois dela, quando responder é treino. */
+export function seloDaPergunta(p: PerguntaDoQuiz, respondidaAgora: boolean): string | null {
+  if (respondidaAgora || p.jaRespondida) return "Já respondida";
+  if (p.podePontuar) return "Vale pontos";
+  return null;
+}
 
 type PropsOpcao = {
   texto: string;
-  estado: "normal" | "certa" | "errada";
+  estado: EstadoOpcao;
+  escolhida: boolean;
   desabilitada: boolean;
   enviando: boolean;
   onEscolher: (evento: MouseEvent<HTMLButtonElement>) => void;
 };
 
-function Opcao({ texto, estado, desabilitada, enviando, onEscolher }: PropsOpcao) {
+function Opcao({ texto, estado, escolhida, desabilitada, enviando, onEscolher }: PropsOpcao) {
   const poucoMovimento = usePoucoMovimento();
   return (
     <motion.button
       type="button"
       onClick={onEscolher}
       disabled={desabilitada}
-      aria-pressed={estado !== "normal"}
+      aria-pressed={escolhida}
       aria-busy={enviando || undefined}
       animate={estado === "errada" && !poucoMovimento ? { x: [0, -4, 4, -4, 4, 0] } : { x: 0 }}
       transition={{ duration: 0.32, ease: "easeInOut" }}
@@ -78,35 +91,27 @@ function Opcao({ texto, estado, desabilitada, enviando, onEscolher }: PropsOpcao
   );
 }
 
-function Explicacao({ situacao }: { situacao: Situacao }) {
+function Explicacao({ situacao, opcoes }: { situacao: Situacao; opcoes: string[] }) {
   const poucoMovimento = usePoucoMovimento();
-  const aberta = situacao.tipo !== "aberta";
   return (
     <div aria-live="polite">
       <AnimatePresence initial={false}>
-        {aberta && (
+        {situacao.tipo === "respondida" && (
           <motion.div
-            key={situacao.tipo}
+            key="explicacao"
             className="overflow-hidden"
             initial={poucoMovimento ? { opacity: 0 } : { height: 0, opacity: 0 }}
             animate={poucoMovimento ? { opacity: 1 } : { height: "auto", opacity: 1 }}
             exit={poucoMovimento ? { opacity: 0 } : { height: 0, opacity: 0 }}
             transition={{ duration: DURACAO.enfatica, ease: CURVA }}
           >
-            {situacao.tipo === "certa" ? (
-              <div className="flex flex-col gap-1 rounded-cartao bg-sucesso-suave px-4 py-3.5">
-                <p className="font-bold text-sucesso">Isso mesmo!</p>
-                {situacao.explicacao && <p className="text-sm">{limparMarcadores(situacao.explicacao)}</p>}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1 rounded-cartao bg-erro-suave px-4 py-3.5">
-                <p className="font-bold text-erro">{situacao.tipo === "errada" ? "Não foi dessa vez." : "Você errou esta da última vez."}</p>
-                <p className="text-sm">
-                  {situacao.tipo === "bloqueada" && situacao.mensagem ? situacao.mensagem : textoNovaTentativa(situacao.liberaEm)} Releia a lição enquanto
-                  isso.
-                </p>
-              </div>
-            )}
+            <div className={juntar("flex flex-col items-start gap-1.5 rounded-cartao px-4 py-3.5", situacao.correta ? "bg-sucesso-suave" : "bg-erro-suave")}>
+              <p className={juntar("font-bold", situacao.correta ? "text-sucesso" : "text-erro")}>
+                {situacao.correta ? "Isso mesmo!" : `Não foi dessa vez. A resposta certa é: ${limparMarcadores(opcoes[situacao.opcaoCorreta] ?? "")}.`}
+              </p>
+              <p className="text-sm">{limparMarcadores(situacao.explicacao)}</p>
+              {situacao.treino && <Chip tom="neutro">Treino: esta resposta não vale pontos</Chip>}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -122,6 +127,8 @@ export function TelaQuiz({ licaoId }: { licaoId: string }) {
   const temSessao = useTemSessao();
   const [indice, setIndice] = useState(0);
   const [situacoes, setSituacoes] = useState<Record<string, Situacao>>({});
+  // Perguntas respondidas nesta visita: daqui em diante, responder de novo é treino.
+  const [respondidasAgora, setRespondidasAgora] = useState<Record<string, true>>({});
   const [acertos, setAcertos] = useState<Record<string, boolean>>({});
   const [enviando, setEnviando] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -131,7 +138,7 @@ export function TelaQuiz({ licaoId }: { licaoId: string }) {
   const perguntas = quiz.estado === "pronto" && !fechado ? quiz.dados.perguntas : [];
   const pergunta = perguntas[indice];
   const fim = quiz.estado === "pronto" && perguntas.length > 0 && indice >= perguntas.length;
-  const situacao: Situacao = pergunta ? (situacoes[pergunta.id] ?? situacaoInicial(pergunta)) : { tipo: "aberta" };
+  const situacao: Situacao = (pergunta && situacoes[pergunta.id]) || { tipo: "aberta" };
   const voltar = licao.estado === "pronto" ? `/trilhas/${licao.dados.trilha.slug}/${licaoId}` : "/trilhas";
   const titulo = licao.estado === "pronto" ? licao.dados.trilha.titulo : "Quiz";
 
@@ -142,21 +149,17 @@ export function TelaQuiz({ licaoId }: { licaoId: string }) {
     setErro(null);
     try {
       const resposta = await api.responderQuiz({ perguntaId: pergunta.id, opcao });
-      setSituacoes((s) => ({
-        ...s,
-        [pergunta.id]: resposta.correta
-          ? { tipo: "certa", opcao, explicacao: resposta.explicacao }
-          : { tipo: "errada", opcao, liberaEm: resposta.proximaTentativaEm },
-      }));
+      invalidar(`quiz-${licaoId}`, "resumo");
+      setSituacoes((s) => ({ ...s, [pergunta.id]: situacaoDaResposta(opcao, resposta) }));
+      setRespondidasAgora((r) => ({ ...r, [pergunta.id]: true }));
       setAcertos((a) => ({ ...a, [pergunta.id]: resposta.correta }));
       celebrar(resposta, botao);
     } catch (e) {
-      if (e instanceof ErroApi && e.codigo === "AGUARDE_NOVA_TENTATIVA") {
-        setSituacoes((s) => ({ ...s, [pergunta.id]: { tipo: "bloqueada", liberaEm: null, mensagem: mensagemParaPessoa(e) } }));
-      } else if (e instanceof ErroApi && e.codigo === "LICAO_NAO_CONCLUIDA") {
+      if (e instanceof ErroApi && e.codigo === "LICAO_NAO_CONCLUIDA") {
         // A tela estava desatualizada: busca o quiz de novo, e ele mostra o convite para ler a lição.
         quiz.recarregar();
       } else {
+        // Inclui o 429 LIMITE_DE_REQUISICOES: mostra a mensagem e espera a pessoa tentar de novo.
         setErro(mensagemParaPessoa(e));
       }
     } finally {
@@ -164,7 +167,14 @@ export function TelaQuiz({ licaoId }: { licaoId: string }) {
     }
   }
 
+  function responderDeNovo() {
+    if (!pergunta) return;
+    setSituacoes((s) => ({ ...s, [pergunta.id]: { tipo: "aberta" } }));
+    setErro(null);
+  }
+
   const ultima = indice + 1 >= perguntas.length;
+  const selo = pergunta && temSessao ? seloDaPergunta(pergunta, Boolean(respondidasAgora[pergunta.id])) : null;
   const totalAcertos = Object.values(acertos).filter(Boolean).length;
   const respondidas = Object.keys(acertos).length;
   const passo = licao.estado === "pronto" ? passoDepoisDaLicao(licao.dados, missoes.estado === "pronto" ? missoes.dados : null) : null;
@@ -190,15 +200,19 @@ export function TelaQuiz({ licaoId }: { licaoId: string }) {
         <div key={pergunta.id} className="flex flex-col gap-4">
           <BarraProgresso valor={indice + 1} total={perguntas.length} de={indice / perguntas.length} rotulo={`Pergunta ${indice + 1} de ${perguntas.length}`} mostrarRotulo />
           <h1 className="text-titulo-2">{limparMarcadores(pergunta.enunciado)}</h1>
-          {pergunta.jaRespondida && pergunta.acertou && situacao.tipo === "aberta" && (
-            <p className="text-pequeno text-apoio">Você já acertou esta. Pode responder de novo para treinar, sem ganhar pontos.</p>
+          {selo && situacao.tipo === "aberta" && (
+            <p className="flex flex-wrap items-center gap-2 text-pequeno text-apoio">
+              <Chip tom={selo === "Vale pontos" ? "sucesso" : "neutro"}>{selo}</Chip>
+              {selo === "Já respondida" && "Responder de novo é treino: não vale pontos."}
+            </p>
           )}
           <div className="flex flex-col gap-2.5" role="group" aria-label="Opções de resposta">
             {pergunta.opcoes.map((texto, i) => (
               <Opcao
                 key={`${pergunta.id}-${i}`}
                 texto={texto}
-                estado={(situacao.tipo === "certa" || situacao.tipo === "errada") && situacao.opcao === i ? (situacao.tipo === "certa" ? "certa" : "errada") : "normal"}
+                estado={estadoDaOpcao(situacao, i)}
+                escolhida={situacao.tipo === "respondida" && situacao.opcao === i}
                 desabilitada={situacao.tipo !== "aberta" || (enviando !== null && enviando !== i)}
                 enviando={enviando === i}
                 onEscolher={(e) => responder(i, e)}
@@ -206,11 +220,16 @@ export function TelaQuiz({ licaoId }: { licaoId: string }) {
             ))}
           </div>
           <MensagemErro id="erro-quiz" erro={erro} />
-          <Explicacao situacao={situacao} />
+          <Explicacao situacao={situacao} opcoes={pergunta.opcoes} />
           {situacao.tipo !== "aberta" && (
-            <Botao variante="escuro" onClick={() => setIndice((i) => i + 1)}>
-              {ultima ? "Ver como fui" : "Próxima pergunta"}
-            </Botao>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Botao variante="secundario" onClick={responderDeNovo}>
+                Responder de novo como treino
+              </Botao>
+              <Botao variante="escuro" onClick={() => setIndice((i) => i + 1)}>
+                {ultima ? "Ver como fui" : "Próxima pergunta"}
+              </Botao>
+            </div>
           )}
           {situacao.tipo === "aberta" && !ultima && (
             <button type="button" onClick={() => setIndice((i) => i + 1)} className="flex min-h-11 items-center justify-center self-center font-bold text-primaria">
@@ -228,7 +247,7 @@ export function TelaQuiz({ licaoId }: { licaoId: string }) {
             {respondidas === 0
               ? "Você não respondeu nenhuma pergunta agora."
               : `Você acertou ${totalAcertos} de ${respondidas} ${respondidas === 1 ? "pergunta" : "perguntas"}.`}{" "}
-            {totalAcertos < respondidas && "As que você errou ficam liberadas de novo em 24 horas."}
+            {respondidas > 0 && "Pode responder de novo quando quiser para treinar, sem ganhar pontos."}
           </p>
           {passo && <BotaoLink href={passo.href}>{passo.rotulo}</BotaoLink>}
           <BotaoLink href={voltar} variante="secundario">

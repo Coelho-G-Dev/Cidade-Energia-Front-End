@@ -6,8 +6,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { BotaoIcone } from "@/components/ui/Botao";
 import { CLASSES_BROTO } from "@/components/ui/BrotoPontos";
 import { Icone } from "@/components/ui/Icone";
+import { conquistasParaAvisar, marcarConquistasVistas } from "@/lib/conquistasVistas";
 import { CURVA, DURACAO, MOLA_CURTA, usePoucoMovimento } from "@/lib/movimento";
-import type { ConquistaNova, ResultadoEvento } from "@/types";
+import type { ConquistaDoResumo, ConquistaNova, ResultadoEvento } from "@/types";
 
 type Celebrar = (evento: ResultadoEvento, origem?: Element | null) => void;
 
@@ -15,6 +16,16 @@ const Contexto = createContext<Celebrar>(() => {});
 
 // Mostra os pontos e as conquistas que o servidor devolveu. O front nunca calcula pontos.
 export const useCelebrar = () => useContext(Contexto);
+
+/** A cada leitura do resumo (perfil, início), mostra as conquistas obtidas que o app ainda não mostrou. */
+export function useAvisarConquistasNovas(conquistas: readonly ConquistaDoResumo[] | undefined) {
+  const celebrar = useCelebrar();
+  useEffect(() => {
+    if (!conquistas) return;
+    const novas = conquistasParaAvisar(conquistas);
+    if (novas.length > 0) celebrar({ pontosGanhos: 0, conquistasNovas: novas });
+  }, [conquistas, celebrar]);
+}
 
 type Broto = { id: number; pontos: number; x: number; y: number };
 
@@ -39,6 +50,7 @@ export function ProvedorCelebracao({ children }: { children: ReactNode }) {
       partes.push(`Você ganhou ${evento.pontosGanhos} pontos.`);
     }
     if (evento.conquistasNovas.length > 0) {
+      marcarConquistasVistas(evento.conquistasNovas.map((c) => c.slug));
       setFila((atual) => [...atual, ...evento.conquistasNovas]);
       partes.push(...evento.conquistasNovas.map((c) => `Conquista nova: ${c.nome}.`));
     }

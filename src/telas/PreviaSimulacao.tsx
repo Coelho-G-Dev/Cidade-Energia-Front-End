@@ -5,9 +5,10 @@ import { Chip } from "@/components/ui/Chip";
 import { NumeroAnimado } from "@/components/ui/NumeroAnimado";
 import { api, mensagemParaPessoa } from "@/lib/api";
 import { juntar } from "@/lib/classes";
-import { anos, brl, placas } from "@/lib/conteudo";
+import { numero } from "@/lib/conteudo";
 import { criarSimulacaoSchema, type CriarSimulacao } from "@/lib/validacao/simulacao";
 import type { ModoSimulacao, ResultadoSimulacao } from "@/types";
+import { BlocosEconomia, reais } from "./BlocosEconomia";
 
 // Espera depois do último toque antes de pedir a prévia, para não chamar o back a cada tecla.
 export const ESPERA_PREVIA_MS = 400;
@@ -65,29 +66,15 @@ export function usePrevia(dados: CriarSimulacao | null) {
   };
 }
 
-function Numero({ rotulo, valor, formatar, sucesso }: { rotulo: string; valor: number; formatar: (v: number) => string; sucesso?: boolean }) {
-  return (
-    <div className={juntar("flex flex-col gap-0.5 rounded-pequeno px-3 py-2.5", sucesso ? "bg-sucesso-suave" : "bg-fundo")}>
-      <span className="text-pequeno text-apoio">{rotulo}</span>
-      <NumeroAnimado
-        valor={valor}
-        formatar={formatar}
-        deZero={false}
-        duracaoMs={300}
-        className={juntar("font-titulo text-titulo-3 font-extrabold tabular-nums", sucesso && "text-sucesso")}
-      />
-    </div>
-  );
-}
-
-export function PainelPrevia({ dados }: { dados: CriarSimulacao | null }) {
+// No desktop a prévia fica fixa ao lado do formulário; no celular, logo acima do botão de ver o resultado.
+export function PainelPrevia({ dados, lateral = false }: { dados: CriarSimulacao | null; lateral?: boolean }) {
   const { resultado, erro, atualizando } = usePrevia(dados);
   const mostrar = dados && resultado;
 
   return (
     <section
       aria-labelledby="titulo-previa"
-      className="sticky top-8 flex flex-col gap-3 rounded-cartao border-2 border-tinta bg-superficie p-4 shadow-azulejo"
+      className={juntar("flex flex-col gap-3 rounded-cartao border-2 border-tinta bg-superficie p-4 shadow-azulejo", lateral && "sticky top-8")}
     >
       <div className="flex items-center justify-between gap-2">
         <h2 id="titulo-previa" className="text-titulo-3">
@@ -96,11 +83,13 @@ export function PainelPrevia({ dados }: { dados: CriarSimulacao | null }) {
         <Chip tom="neutro">Valores estimados</Chip>
       </div>
       {mostrar ? (
-        <div aria-busy={atualizando} className={juntar("grid grid-cols-2 gap-2 transition-opacity duration-200", atualizando && "opacity-60")}>
-          <Numero rotulo="Gasto por mês" valor={resultado.gastoMensal} formatar={(v) => brl(v, 0)} />
-          <Numero rotulo="Dá para economizar" valor={resultado.economiaMensal} formatar={(v) => brl(v, 0)} sucesso />
-          <Numero rotulo="Placas solares" valor={resultado.placas} formatar={placas} />
-          <Numero rotulo="Retorno" valor={resultado.retornoAnos} formatar={anos} />
+        <div aria-busy={atualizando} className={juntar("flex flex-col gap-2 transition-opacity duration-200", atualizando && "opacity-60")}>
+          <div className="flex flex-col gap-0.5 rounded-pequeno bg-fundo px-3 py-2.5">
+            <span className="text-pequeno text-apoio">Gasto por mês</span>
+            <NumeroAnimado valor={resultado.gastoMensal} formatar={reais} deZero={false} duracaoMs={300} className="font-titulo text-titulo-3 font-extrabold tabular-nums" />
+            <span className="text-pequeno text-apoio">≈ {numero(resultado.consumoKwh, 0)} kWh por mês</span>
+          </div>
+          <BlocosEconomia resultado={resultado} compacto deZero={false} />
         </div>
       ) : (
         <p className="text-apoio">
@@ -110,7 +99,7 @@ export function PainelPrevia({ dados }: { dados: CriarSimulacao | null }) {
       {erro && <p className="text-pequeno text-erro">{erro}</p>}
       <p className="text-pequeno text-apoio">A prévia não fica salva. Para guardar o resultado, use Ver meu resultado.</p>
       <span className="sr-only" aria-live="polite">
-        {mostrar && !atualizando ? `Prévia: gasto de cerca de ${brl(resultado.gastoMensal, 0)} por mês.` : ""}
+        {mostrar && !atualizando ? `Prévia: gasto de cerca de ${reais(resultado.gastoMensal)} por mês.` : ""}
       </span>
     </section>
   );

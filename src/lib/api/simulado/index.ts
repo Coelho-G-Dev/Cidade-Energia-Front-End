@@ -26,11 +26,11 @@ import { ErroCalculo, simular, type EntradaSimulacao } from "./calculo";
 import { APARELHOS, BAIRROS, CONQUISTAS, ESCOLAS, LICOES, MISSOES, PERGUNTAS, PONTOS_MAPA, TRILHAS } from "./conteudo";
 import { responderTutorSimulado } from "./tutor";
 import {
-  avaliarTentativa,
   conquistasMerecidas,
   diaEHora,
   diaEmSaoLuis,
   PONTOS_POR_ORIGEM,
+  tentativaPontuavel,
   type RespostaAnterior,
 } from "./regras";
 
@@ -44,16 +44,19 @@ export const PONTOS_ILUSTRATIVOS = {
 } as const satisfies Record<TipoRanking, Record<string, readonly [number, number]>>;
 
 export const SOL_DE_HOJE_SIMULADO = {
-  data: "2026-10-09",
-  irradiacao: 6.22,
-  kwhPorPlaca: 2.74,
-  horasArCondicionado: 2.7,
-  co2EvitadoKg: 0.105,
+  data: "2026-10-17",
+  atualizadoEm: "2026-10-22T03:57:31.724+00:00",
+  diasDeAtraso: 5,
+  irradiacao: 6.32,
+  kwhPorPlaca: 2.78,
+  horasArCondicionado: 2.8,
+  co2EvitadoKg: 0.107,
   estimativa: true,
-  fonte: "nasa-power",
+  fonte: "cache",
 } as const;
 
 const LIMITE_TROCAS = 3;
+const MINIMO_PARTICIPANTES_RANKING = 3;
 const JANELA_TROCAS_MS = 30 * 24 * 3_600_000;
 const LIMITE_TUTOR_POR_HORA = 20;
 const HORA_MS = 3_600_000;
@@ -156,7 +159,8 @@ export function criarSimulado({ atrasoMs = 450, agora = () => new Date(), aleato
             const meu = estado.perfil.escola_id === e.id && estado.perfil.escola_verificada && meus > 0;
             return { id: e.id, nome: e.nome, bairroId: e.bairro_id, pontos: base[0] + (meu ? meus : 0), participantes: base[1] + (meu ? 1 : 0) };
           });
-    const comPontos = linhas.filter((l) => l.pontos > 0).sort((a, b) => b.pontos - a.pontos || a.nome.localeCompare(b.nome));
+    // Como no back: só entra quem tem pelo menos 3 estudantes com pontos.
+    const comPontos = linhas.filter((l) => l.pontos > 0 && l.participantes >= MINIMO_PARTICIPANTES_RANKING).sort((a, b) => b.pontos - a.pontos || a.nome.localeCompare(b.nome));
     return comPontos.map((l) => ({ ...l, posicao: comPontos.findIndex((o) => o.pontos === l.pontos) + 1 }));
   }
 
@@ -479,7 +483,6 @@ export function criarSimulado({ atrasoMs = 450, agora = () => new Date(), aleato
           .sort((a, b) => a.ordem - b.ordem)
           .map((p) => {
             const resposta = estado.logado ? (estado.respostas.get(p.id) ?? null) : null;
-            const decisao = avaliarTentativa(resposta, agora());
             return {
               id: p.id,
               ordem: p.ordem,
@@ -487,8 +490,7 @@ export function criarSimulado({ atrasoMs = 450, agora = () => new Date(), aleato
               opcoes: [...p.opcoes],
               jaRespondida: Boolean(resposta),
               acertou: resposta ? resposta.correta : null,
-              podePontuar: licaoConcluida && decisao.pontuavel,
-              proximaTentativaEm: decisao.proximaTentativaEm?.toISOString() ?? null,
+              podePontuar: licaoConcluida && tentativaPontuavel(resposta),
             };
           }),
       };
@@ -504,21 +506,17 @@ export function criarSimulado({ atrasoMs = 450, agora = () => new Date(), aleato
 
       const correta = opcao === pergunta.indiceCorreto;
       const anterior: RespostaAnterior = estado.respostas.get(perguntaId) ?? null;
-      const decisao = avaliarTentativa(anterior, agora());
-      if (!decisao.pontuavel && !anterior?.correta) {
-        const { dia, hora } = diaEHora(decisao.proximaTentativaEm!);
-        throw new ErroApi(429, "AGUARDE_NOVA_TENTATIVA", `Você poderá responder esta pergunta de novo a partir de ${dia} às ${hora}.`);
-      }
-      if (decisao.pontuavel) estado.respostas.set(perguntaId, { correta, tentativaEm: agora() });
-      const final = estado.respostas.get(perguntaId) ?? null;
-      const evento = final?.correta
+      const pontuavel = tentativaPontuavel(anterior);
+      if (pontuavel) estado.respostas.set(perguntaId, { correta, tentativaEm: agora() });
+      const acertouNaPrimeira = pontuavel ? correta : anterior?.correta === true;
+      const evento = acertouNaPrimeira
         ? registrarEvento("resposta_correta", perguntaId, PONTOS_POR_ORIGEM.resposta_correta)
         : { pontosGanhos: 0, conquistasNovas: [] };
       return {
         correta,
-        explicacao: correta ? pergunta.explicacao : null,
-        tentativaPontuavel: decisao.pontuavel,
-        proximaTentativaEm: avaliarTentativa(final, agora()).proximaTentativaEm?.toISOString() ?? null,
+        opcaoCorreta: pergunta.indiceCorreto,
+        explicacao: pergunta.explicacao,
+        tentativaPontuavel: pontuavel,
         ...evento,
       };
     },

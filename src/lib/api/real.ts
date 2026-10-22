@@ -6,8 +6,7 @@ const id = (valor: string) => encodeURIComponent(valor);
 export function criarClienteReal(requisitar: Requisitar): ClienteApi {
   return {
     listarBairros: () => requisitar("/api/bairros", { autenticacao: "nenhuma" }),
-    listarEscolas: (bairroId) =>
-      requisitar(bairroId ? `/api/escolas?bairro=${id(bairroId)}` : "/api/escolas", { autenticacao: "nenhuma" }),
+    listarEscolas: (bairroId) => requisitar(`/api/escolas?bairro=${id(bairroId)}`, { autenticacao: "nenhuma" }),
     listarAparelhos: () => requisitar("/api/aparelhos", { autenticacao: "nenhuma" }),
     obterPerfil: () => requisitar("/api/perfil", { autenticacao: "exigida" }),
     atualizarPerfil: (dados) => requisitar("/api/perfil", { metodo: "PUT", corpo: dados, autenticacao: "exigida" }),

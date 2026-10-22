@@ -2,6 +2,8 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useAvisarConquistasNovas } from "@/components/app/Celebracao";
 import { Carregando, EstadoErro, EstadoVazio } from "@/components/app/Estados";
 import { BarraProgresso } from "@/components/ui/BarraProgresso";
 import { BotaoLink } from "@/components/ui/Botao";
@@ -11,13 +13,20 @@ import { PadraoAzulejo } from "@/components/ui/PadraoAzulejo";
 import { api } from "@/lib/api";
 import { dataCurta, numero } from "@/lib/conteudo";
 import { CURVA, usePoucoMovimento } from "@/lib/movimento";
+import { preCarregar } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
+import { useSaudacao } from "@/lib/saudacao";
+import { useTemSessao } from "@/lib/useTemSessao";
+import type { SolDeHoje } from "@/types";
 
-function saudacao(agora = new Date()) {
-  const hora = agora.getHours();
-  if (hora < 12) return "Bom dia";
-  if (hora < 18) return "Boa tarde";
-  return "Boa noite";
+// A NASA publica com alguns dias de atraso: só chama de "hoje" quando o dado é mesmo de hoje.
+export function textosDoSol(sol: Pick<SolDeHoje, "data" | "diasDeAtraso" | "fonte">): { titulo: string; quando: string } {
+  if (sol.fonte === "padrao" || !sol.data || sol.diasDeAtraso === null) {
+    return { titulo: "Sol em São Luís", quando: "Média de São Luís, estimativa com a média anual de irradiação" };
+  }
+  if (sol.diasDeAtraso <= 0) return { titulo: "Sol de hoje em São Luís", quando: "Estimativa com dados de irradiação da NASA" };
+  const ha = sol.diasDeAtraso === 1 ? "há 1 dia" : `há ${sol.diasDeAtraso} dias`;
+  return { titulo: "Sol mais recente em São Luís", quando: `Sol de ${dataCurta(sol.data)}, ${ha}. Estimativa com dados de irradiação da NASA` };
 }
 
 // Os raios giram enquanto o sol de hoje carrega e param quando a resposta chega.
@@ -40,21 +49,31 @@ function SolDeHojeIcone({ girando }: { girando: boolean }) {
 }
 
 export function TelaInicio() {
+  const saudacao = useSaudacao();
   const perfil = useDados("perfil", () => api.obterPerfil());
   const sol = useDados("sol", () => api.solDeHoje());
   const trilhas = useDados("trilhas", () => api.listarTrilhas());
   const missoes = useDados("missoes", () => api.listarMissoes());
+  // O resumo traz as conquistas: as que chegaram sem aviso (como o Bairro unido) aparecem aqui.
+  const temSessao = useTemSessao();
+  const resumo = useDados(temSessao ? "resumo" : null, () => api.obterResumo());
+  useAvisarConquistasNovas(resumo.estado === "pronto" ? resumo.dados.conquistas : undefined);
   const missaoAberta = missoes.estado === "pronto" ? missoes.dados.find((m) => m.diasRegistrados > 0 && !m.concluida) : undefined;
   const nome = perfil.estado === "pronto" ? perfil.dados.primeiro_nome : null;
   const emAndamento =
     trilhas.estado === "pronto" ? (trilhas.dados.find((t) => t.licoesConcluidas > 0 && !t.concluida) ?? trilhas.dados[0]) : null;
 
+  const slugEmAndamento = emAndamento?.slug;
+  useEffect(() => {
+    if (slugEmAndamento) preCarregar(`trilha-${slugEmAndamento}`, () => api.obterTrilha(slugEmAndamento));
+  }, [slugEmAndamento]);
+
   return (
     <div className="flex flex-col gap-4">
       <header className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <span className="text-pequeno text-apoio" suppressHydrationWarning>
-            {saudacao()}
+          <span className="text-pequeno text-apoio">
+            {saudacao}
             {nome ? `, ${nome}` : ""}!
           </span>
           <h1 className="text-titulo-2">Vamos entender a sua energia?</h1>
@@ -88,18 +107,16 @@ export function TelaInicio() {
             <Card className="flex items-center gap-3" aria-busy={sol.estado === "carregando"}>
               <SolDeHojeIcone girando={sol.estado === "carregando"} />
               <span className="flex flex-1 flex-col gap-0.5" aria-live="polite">
-                <span className="font-bold">Sol de hoje em São Luís</span>
+                <span className="font-bold">{sol.estado === "pronto" ? textosDoSol(sol.dados).titulo : "Sol em São Luís"}</span>
                 {sol.estado === "carregando" ? (
-                  <span className="text-pequeno text-apoio">Buscando quanto sol faz hoje...</span>
+                  <span className="text-pequeno text-apoio">Buscando o sol mais recente...</span>
                 ) : (
                   <>
                     <span className="text-pequeno text-apoio">
                       Uma placa solar geraria cerca de {numero(sol.dados.kwhPorPlaca)} kWh, o bastante para{" "}
                       {numero(sol.dados.horasArCondicionado)} h de ar-condicionado.
                     </span>
-                    <span className="text-mini text-apoio">
-                      Estimativa com dados de irradiação da NASA{sol.dados.data ? ` (sol de ${dataCurta(sol.dados.data)})` : ""}
-                    </span>
+                    <span className="text-mini text-apoio">{textosDoSol(sol.dados).quando}</span>
                   </>
                 )}
               </span>

@@ -20,7 +20,7 @@ function montar() {
 
 const anil = BAIRROS.find((b) => b.nome === "Anil")!.id;
 const centro = BAIRROS.find((b) => b.nome === "Centro")!.id;
-const solNascente = ESCOLAS.find((e) => e.codigo_turma === "SOL2026")!;
+const solNascente = ESCOLAS.find((e) => e.codigo_turma === "TESTE2AB")!;
 
 describe("os schemas copiados batem com os tipos de src/types", () => {
   it("entradas", () => {
@@ -47,7 +47,21 @@ describe("simulador", () => {
   it("reproduz o caso de referência do back (380 kWh, R$ 312)", async () => {
     const { api } = montar();
     const r = await api.previaSimulacao({ modo: "conta", consumoKwh: 380, valorConta: 312 });
-    expect(r).toMatchObject({ consumoKwh: 380, gastoMensal: 312, economiaMensal: 31.2, placas: 6, retornoAnos: 2.5, co2EvitadoKgAno: 191.2 });
+    expect(r).toMatchObject({
+      consumoKwh: 380,
+      gastoMensal: 312,
+      economiaHabitosMensal: 31.2,
+      economiaSolarMensal: 312,
+      kwhGeradoMes: 413.9,
+      custoSistemaSolar: 9372,
+      retornoSolarAnos: 2.5,
+      placas: 6,
+      co2EvitadoKgAno: 191.2,
+    });
+    expect(r).not.toHaveProperty("economiaMensal");
+    expect(r.comoCalculamos.economiaHabitos).toBe("Meta de 10% da conta com mudança de hábitos, sem investimento: R$ 312,00 × 10%.");
+    expect(r.comoCalculamos.economiaSolar).toMatch(/A conta de luz ainda cobra uma taxa mínima, que as placas não zeram\.$/);
+    expect(r.comoCalculamos.retornoSolar).toMatch(/Usa a economia com energia solar, não a de hábitos\.$/);
     expect(r.pesos).toEqual([]);
     expect(r.simulacaoId).toBeNull();
   });
@@ -108,10 +122,10 @@ describe("login e perfil", () => {
     const pelaLista = await api.atualizarPerfil({ primeiro_nome: "Ana", bairro_id: anil, escola_id: solNascente.id });
     expect(pelaLista).toMatchObject({ tem_perfil: true, escola_id: solNascente.id, escola_verificada: false });
 
-    const peloCodigo = await api.atualizarPerfil({ primeiro_nome: "Ana", bairro_id: anil, codigo_turma: "sol2026" });
+    const peloCodigo = await api.atualizarPerfil({ primeiro_nome: "Ana", bairro_id: anil, codigo_turma: "teste2ab" });
     expect(peloCodigo.escola_verificada).toBe(true);
 
-    await expect(api.atualizarPerfil({ primeiro_nome: "Ana", bairro_id: anil, codigo_turma: "XYZ999" })).rejects.toMatchObject({
+    await expect(api.atualizarPerfil({ primeiro_nome: "Ana", bairro_id: anil, codigo_turma: "XYZW9999" })).rejects.toMatchObject({
       codigo: "TURMA_NAO_ENCONTRADA",
     });
     await expect(api.atualizarPerfil({ primeiro_nome: "Ana Maria", bairro_id: anil })).rejects.toMatchObject({
@@ -132,38 +146,43 @@ describe("login e perfil", () => {
   });
 });
 
-describe("quiz segue as regras do Dia 4 do back", () => {
+describe("quiz: só a primeira tentativa vale pontos, o resto é treino", () => {
   const pergunta = PERGUNTAS[0]!;
   const errada = (pergunta.indiceCorreto + 1) % pergunta.opcoes.length;
 
-  it("resposta errada não traz explicação nem libera nova tentativa antes de 24 h", async () => {
-    const { api, sessao, avancarHoras } = montar();
-    await sessao.entrarAnonimo();
-    await api.concluirLicao(pergunta.licaoId);
-
-    const r = await api.responderQuiz({ perguntaId: pergunta.id, opcao: errada });
-    expect(r).toMatchObject({ correta: false, explicacao: null, tentativaPontuavel: true, pontosGanhos: 0 });
-    expect(r.proximaTentativaEm).not.toBeNull();
-
-    await expect(api.responderQuiz({ perguntaId: pergunta.id, opcao: pergunta.indiceCorreto })).rejects.toMatchObject({
-      status: 429,
-      codigo: "AGUARDE_NOVA_TENTATIVA",
-    });
-    const quiz = await api.obterQuiz(pergunta.licaoId);
-    expect(quiz.perguntas[0]).toMatchObject({ jaRespondida: true, acertou: false, podePontuar: false });
-
-    avancarHoras(24);
-    const certa = await api.responderQuiz({ perguntaId: pergunta.id, opcao: pergunta.indiceCorreto });
-    expect(certa).toMatchObject({ correta: true, explicacao: pergunta.explicacao, pontosGanhos: 5 });
-  });
-
-  it("depois de acertar, pode responder de novo sem pontos", async () => {
+  it("resposta errada traz a opção certa e a explicação, e a seguinte é treino", async () => {
     const { api, sessao } = montar();
     await sessao.entrarAnonimo();
     await api.concluirLicao(pergunta.licaoId);
-    await api.responderQuiz({ perguntaId: pergunta.id, opcao: pergunta.indiceCorreto });
+
+    const antes = await api.obterQuiz(pergunta.licaoId);
+    expect(antes.perguntas[0]).toMatchObject({ jaRespondida: false, acertou: null, podePontuar: true });
+
+    const r = await api.responderQuiz({ perguntaId: pergunta.id, opcao: errada });
+    expect(r).toEqual({
+      correta: false,
+      opcaoCorreta: pergunta.indiceCorreto,
+      explicacao: pergunta.explicacao,
+      tentativaPontuavel: true,
+      pontosGanhos: 0,
+      conquistasNovas: [],
+    });
+    const depois = await api.obterQuiz(pergunta.licaoId);
+    expect(depois.perguntas[0]).toMatchObject({ jaRespondida: true, acertou: false, podePontuar: false });
+
+    const treino = await api.responderQuiz({ perguntaId: pergunta.id, opcao: pergunta.indiceCorreto });
+    expect(treino).toMatchObject({ correta: true, tentativaPontuavel: false, pontosGanhos: 0 });
+    expect((await api.obterQuiz(pergunta.licaoId)).perguntas[0]).toMatchObject({ acertou: false });
+  });
+
+  it("acertar na primeira vale 5 pontos; responder de novo não", async () => {
+    const { api, sessao } = montar();
+    await sessao.entrarAnonimo();
+    await api.concluirLicao(pergunta.licaoId);
+    const certa = await api.responderQuiz({ perguntaId: pergunta.id, opcao: pergunta.indiceCorreto });
+    expect(certa).toMatchObject({ correta: true, tentativaPontuavel: true, pontosGanhos: 5 });
     const de_novo = await api.responderQuiz({ perguntaId: pergunta.id, opcao: errada });
-    expect(de_novo).toMatchObject({ correta: false, explicacao: null, tentativaPontuavel: false, pontosGanhos: 0 });
+    expect(de_novo).toMatchObject({ correta: false, opcaoCorreta: pergunta.indiceCorreto, tentativaPontuavel: false, pontosGanhos: 0 });
   });
 });
 
@@ -278,7 +297,7 @@ describe("rankings", () => {
     const escolaSemCodigo = (await api.listarRanking("escolas")).find((l) => l.id === solNascente.id)!;
     expect(escolaSemCodigo.pontos).toBe(120);
 
-    await api.atualizarPerfil({ primeiro_nome: "Ana", bairro_id: anil, codigo_turma: "SOL2026" });
+    await api.atualizarPerfil({ primeiro_nome: "Ana", bairro_id: anil, codigo_turma: "TESTE2AB" });
     expect((await api.listarRanking("escolas")).find((l) => l.id === solNascente.id)!.pontos).toBe(140);
     expect((await api.obterResumo()).escola).toEqual({ posicao: 1, pontos: 140 });
   });

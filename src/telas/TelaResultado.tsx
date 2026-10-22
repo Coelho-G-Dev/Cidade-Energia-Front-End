@@ -11,15 +11,16 @@ import { Chip } from "@/components/ui/Chip";
 import { Topo } from "@/components/ui/Topo";
 import { api, ErroApi } from "@/lib/api";
 import { juntar } from "@/lib/classes";
-import { anos, brl, numero, placas } from "@/lib/conteudo";
+import { numero } from "@/lib/conteudo";
 import { lerResultado } from "@/lib/resultado";
 import { useDados } from "@/lib/useDados";
-import type { ResultadoSimulacao } from "@/types";
+import type { ResultadoSalvo } from "@/types";
+import { BlocosEconomia, reais } from "./BlocosEconomia";
 
 export function TelaResultado() {
   const [guardado] = useState(lerResultado);
   const ultima = useDados(guardado ? null : "ultima-simulacao", () => api.ultimaSimulacao());
-  const resultado: ResultadoSimulacao | null = guardado ?? (ultima.estado === "pronto" ? ultima.dados.resultado : null);
+  const resultado: ResultadoSalvo | null = guardado ?? (ultima.estado === "pronto" ? ultima.dados.resultado : null);
   const semSimulacao = ultima.estado === "erro" && ultima.erro instanceof ErroApi && ultima.erro.codigo === "NENHUMA_SIMULACAO";
   const celebrar = useCelebrar();
   const numeros = useRef<HTMLDivElement>(null);
@@ -50,11 +51,10 @@ export function TelaResultado() {
           <Chip tom="neutro" className="self-start">
             Valores estimados
           </Chip>
-          <div ref={numeros} className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <CardNumero rotulo="Gasto por mês" valor={resultado.gastoMensal} formatar={(v) => brl(v, 0)} complemento={`≈ ${numero(resultado.consumoKwh, 0)} kWh`} />
-            <CardNumero rotulo="Dá para economizar" valor={resultado.economiaMensal} formatar={(v) => brl(v, 0)} complemento="por mês" tom="sucesso" />
-            <CardNumero rotulo="Placas solares" valor={resultado.placas} formatar={placas} complemento="para o seu consumo" />
-            <CardNumero rotulo="Retorno" valor={resultado.retornoAnos} formatar={anos} complemento="para se pagar" />
+          <div ref={numeros} className="flex flex-col gap-3">
+            <CardNumero rotulo="Gasto por mês" valor={resultado.gastoMensal} formatar={reais} complemento={`≈ ${numero(resultado.consumoKwh, 0)} kWh por mês`} />
+            <h2 className="text-titulo-3">Dois jeitos de economizar</h2>
+            <BlocosEconomia resultado={resultado} />
           </div>
           {/* No desktop o peso dos aparelhos fica ao lado do que fazer em seguida. */}
           <div className={juntar("grid gap-4", resultado.pesos.length > 0 && "lg:grid-cols-2 lg:items-start lg:gap-6")}>
@@ -73,9 +73,6 @@ export function TelaResultado() {
               </Card>
             )}
             <div className="flex flex-col gap-4">
-              <div>
-                <Chip tom="sucesso">Com solar: {numero(resultado.co2EvitadoKgAno, 0)} kg de CO₂ a menos por ano</Chip>
-              </div>
               <p className="text-pequeno text-apoio">Todos os valores são estimativas para aprender. Um projeto de verdade é feito por um profissional.</p>
               <BotaoLink href="/trilhas">Aprender a economizar</BotaoLink>
             </div>

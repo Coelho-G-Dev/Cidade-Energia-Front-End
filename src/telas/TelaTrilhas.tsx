@@ -13,6 +13,7 @@ import { Icone } from "@/components/ui/Icone";
 import { api } from "@/lib/api";
 import { progressoDaMissao } from "@/lib/missoesDasTrilhas";
 import { DURACAO, MOLA_CURTA } from "@/lib/movimento";
+import { preCarregar } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
 import type { ResumoTrilha } from "@/types";
 
@@ -37,9 +38,14 @@ export function filtrarTrilhas(trilhas: readonly ResumoTrilha[], filtro: IdFiltr
 }
 
 export function CardTrilha({ trilha }: { trilha: ResumoTrilha }) {
+  // Ao encostar no card, a trilha já começa a vir: o "continuar" só espera a lição.
+  const adiantar = () => preCarregar(`trilha-${trilha.slug}`, () => api.obterTrilha(trilha.slug));
   return (
     <Link
       href={`/trilhas/${trilha.slug}/continuar`}
+      onPointerEnter={adiantar}
+      onPointerDown={adiantar}
+      onFocus={adiantar}
       data-direcao="expandir"
       className="afundar relative block h-full rounded-cartao text-tinta no-underline shadow-azulejo"
     >
