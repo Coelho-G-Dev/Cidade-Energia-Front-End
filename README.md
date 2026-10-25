@@ -51,10 +51,6 @@
 
 O **Cidade Energia** foi o **projeto campeão do Hackathon Equatorial**, no Desafio 9, com a premiação em **23 de outubro de 2026**, no EQT Lab. A proposta venceu ao transformar a conta de luz, algo que todo estudante tem em casa, na primeira aula de energia para escolas públicas de São Luís (MA).
 
-<p align="center">
-  <img src="docs/foto-campeoes-hackathon.jpeg" alt="Equipe do Cidade Energia com os troféus de campeã do Hackathon Equatorial, no EQT Lab" width="720" />
-</p>
-
 ---
 
 ## 🎯 Visão Geral
