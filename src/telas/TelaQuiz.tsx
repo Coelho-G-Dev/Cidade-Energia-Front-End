@@ -152,7 +152,8 @@ export function TelaQuiz({ licaoId }: { licaoId: string }) {
       invalidar(`quiz-${licaoId}`, "resumo");
       setSituacoes((s) => ({ ...s, [pergunta.id]: situacaoDaResposta(opcao, resposta) }));
       setRespondidasAgora((r) => ({ ...r, [pergunta.id]: true }));
-      setAcertos((a) => ({ ...a, [pergunta.id]: resposta.correta }));
+      // O resumo conta a primeira resposta da visita: o treino que vem depois não muda o resultado.
+      setAcertos((a) => (pergunta.id in a ? a : { ...a, [pergunta.id]: resposta.correta }));
       celebrar(resposta, botao);
     } catch (e) {
       if (e instanceof ErroApi && e.codigo === "LICAO_NAO_CONCLUIDA") {

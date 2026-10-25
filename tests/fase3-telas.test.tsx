@@ -86,6 +86,23 @@ describe("quiz", () => {
     expect(api.responderQuiz).toHaveBeenCalledTimes(2);
   });
 
+  it("o resumo conta a primeira resposta, não o acerto no treino", async () => {
+    api.responderQuiz
+      .mockResolvedValueOnce({ correta: false, opcaoCorreta: 1, explicacao: "A placa usa a luz.", tentativaPontuavel: true, pontosGanhos: 0, conquistasNovas: [] })
+      .mockResolvedValueOnce({ correta: true, opcaoCorreta: 1, explicacao: "A placa usa a luz.", tentativaPontuavel: false, pontosGanhos: 0, conquistasNovas: [] });
+    render(
+      <ProvedorCelebracao>
+        <TelaQuiz licaoId="l1" />
+      </ProvedorCelebracao>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Calor" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Responder de novo como treino" }));
+    await userEvent.click(screen.getByRole("button", { name: "Luz do sol" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Ver como fui" }));
+    expect(screen.getByRole("heading", { name: "Quiz terminado" })).toBeInTheDocument();
+    expect(screen.getByText(/Você acertou 0 de 1 pergunta\./)).toBeInTheDocument();
+  });
+
   it("pergunta já respondida antes aparece como treino", async () => {
     api.obterQuiz.mockResolvedValue({ licaoId: "l1", licaoConcluida: true, perguntas: [{ ...PERGUNTA, jaRespondida: true, acertou: false, podePontuar: false }] });
     render(

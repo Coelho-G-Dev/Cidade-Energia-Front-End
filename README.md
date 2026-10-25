@@ -8,6 +8,10 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/🏆_Campeão-Hackathon_Equatorial-F5B800?style=for-the-badge" alt="Campeão do Hackathon Equatorial" />
+</p>
+
+<p align="center">
   <a href="https://cidade-energia.vercel.app" target="_blank">
     <img src="https://img.shields.io/badge/App-Cidade_Energia-F5B800?style=for-the-badge&logo=vercel&logoColor=black" alt="App em produção" />
   </a>
@@ -29,6 +33,7 @@
   <img src="https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white" alt="Vercel" />
 </p>
 
+[Campeões](#-campeões-do-hackathon-equatorial) •
 [Visão Geral](#-visão-geral) •
 [Deploy](#-deploy-em-produção) •
 [Destaques](#-destaques-de-engenharia) •
@@ -41,6 +46,16 @@
 ---
 
 </div>
+
+## 🏆 Campeões do Hackathon Equatorial
+
+O **Cidade Energia** foi o **projeto campeão do Hackathon Equatorial**, no Desafio 9, com a premiação em **23 de outubro de 2026**, no EQT Lab. A proposta venceu ao transformar a conta de luz, algo que todo estudante tem em casa, na primeira aula de energia para escolas públicas de São Luís (MA).
+
+<p align="center">
+  <img src="docs/foto-campeoes-hackathon.jpeg" alt="Equipe do Cidade Energia com os troféus de campeã do Hackathon Equatorial, no EQT Lab" width="720" />
+</p>
+
+---
 
 ## 🎯 Visão Geral
 
@@ -281,7 +296,7 @@ Os testes rodam sem backend e sem Supabase: usam o cliente simulado e cobrem as 
 
 ## 📬 Contato
 
-Projeto desenvolvido para o **Hackathon Equatorial (Desafio 9)**.
+Projeto **campeão do Hackathon Equatorial (Desafio 9)**.
 
 📍 **São Luís, MA · Brasil 🇧🇷**
 
