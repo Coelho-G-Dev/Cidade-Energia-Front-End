@@ -115,7 +115,7 @@ export function Vitrine() {
 
         <Secao titulo="Tipografia" descricao="Bricolage Grotesque nos títulos e Figtree no texto. Os tamanhos se ajustam à largura da tela.">
           <div className="flex flex-col gap-3">
-            <p className="font-titulo text-titulo-1 font-extrabold">Sua conta de luz é a sua primeira aula</p>
+            <p className="font-titulo text-titulo-1 font-extrabold">Sua conta de luz será a sua primeira aula de energia</p>
             <p className="font-titulo text-titulo-2 font-extrabold">Quanto da sua conta dá para economizar?</p>
             <p className="font-titulo text-titulo-3 font-extrabold">Continue aprendendo</p>
             <p className="font-titulo text-numero font-extrabold">R$ 312</p>

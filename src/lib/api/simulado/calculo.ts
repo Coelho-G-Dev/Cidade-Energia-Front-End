@@ -7,7 +7,7 @@ export const POTENCIA_PLACA_KWP = 0.55;
 export const CUSTO_SISTEMA_POR_KWP = 2840;
 export const FATOR_PERDAS = 0.8;
 export const IRRADIACAO_MEDIA_SAO_LUIS = 5.226;
-export const FATOR_EMISSAO_KG_CO2_KWH = 0.0385;
+export const FATOR_EMISSAO_KG_CO2_KWH = 0.0461;
 export const PERCENTUAL_ECONOMIA_PADRAO = 0.1;
 export type RegraEconomia = { dica: string } & ({ reducaoHorasDia: number } | { reducaoPercentual: number });
 

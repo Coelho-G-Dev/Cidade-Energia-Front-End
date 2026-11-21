@@ -195,7 +195,7 @@ export const LICOES: { id: string; trilhaSlug: string; ordem: number; titulo: st
     "ordem": 3,
     "titulo": "Pedale e veja",
     "tipo": "pedale",
-    "conteudo": "Hora de sentir na perna quanta energia é preciso para ligar um aparelho!\n\n**Como funciona a atividade:**\n\n1. Pedale na bicicleta geradora (ou no simulador do app).\n2. Veja no painel quantos **watts** você está gerando.\n3. Tente manter a lâmpada LED (9 W) acesa. Depois tente o ventilador (60 W).\n\nUma pessoa pedalando com esforço moderado gera algo entre 50 e 150 W por alguns minutos. Agora compare: um chuveiro elétrico usa cerca de **5.500 W**. Seriam dezenas de pessoas pedalando ao mesmo tempo só para um banho!\n\nUma placa solar de 550 W, no sol forte do meio-dia, entrega energia parecida com a de várias pessoas pedalando, sem cansar e sem fazer barulho.\n\nAo terminar, toque em **Concluir** para registrar a atividade."
+    "conteudo": "Hora de sentir na perna quanta energia é preciso para ligar um aparelho!\n\n**Como funciona a atividade:**\n\n1. Pedale na bicicleta geradora (ou no simulador do app).\n2. Veja no painel quantos **watts** você está gerando.\n3. Tente manter a lâmpada LED (9 W) acesa. Depois tente o ventilador (60 W).\n\nUma pessoa pedalando com esforço moderado gera algo entre 50 e 150 W por alguns minutos. Agora compare: um chuveiro elétrico usa cerca de **5.500 W**. Seriam dezenas de pessoas pedalando ao mesmo tempo só para um banho!\n\nUma placa solar de 550 W, no sol forte do meio-dia, entrega energia parecida com a de várias pessoas pedalando, sem cansar e sem fazer barulho.\n\nAo terminar, toque em **Ir para a próxima lição** para registrar a atividade."
   },
   {
     "id": "0c000000-0000-4000-8000-000000000030",
@@ -227,7 +227,7 @@ export const LICOES: { id: string; trilhaSlug: string; ordem: number; titulo: st
     "ordem": 3,
     "titulo": "Marés: a força do mar de São Luís",
     "tipo": "texto",
-    "conteudo": "Quem mora em São Luís conhece bem: a maré sobe e desce muito ao longo do dia. A diferença entre a maré alta e a maré baixa aqui está entre as **maiores do Brasil**, podendo passar de 6 metros.\n\nEssa água que sobe e desce carrega muita energia. Uma **usina de marés com barragem** funciona assim:\n\n1. Na maré alta, a água entra e fica guardada atrás de uma barragem.\n2. Na maré baixa, a água sai passando por **turbinas**, que giram geradores.\n\nNas décadas de 1970 e 1980 houve estudos para uma usina de marés na **Barragem do Bacanga**, em São Luís, mas a usina não chegou a funcionar.\n\nHoje a energia das marés ainda é pouco usada no mundo, mas é uma fonte renovável e previsível: sabemos com antecedência a hora de cada maré."
+    "conteudo": "Quem mora em São Luís conhece bem: a maré sobe e desce muito ao longo do dia. A diferença entre a maré alta e a maré baixa aqui está entre as **maiores do Brasil**, podendo passar de 6 metros.\n\nEssa água que sobe e desce carrega muita energia. Uma **usina de marés com barragem** funciona assim:\n\n1. Na maré alta, a água entra e fica guardada atrás de uma barragem.\n2. Na maré baixa, a água sai passando por **turbinas**, que giram geradores.\n\nDesde a construção da **Barragem do Bacanga**, concluída em 1973, e em estudos da Eletrobras nos anos 1980, cogitou-se instalar ali uma usina de marés, mas **as turbinas nunca chegaram a ser instaladas**: o crescimento de bairros ao redor do reservatório limitou quanto o nível da água podia variar sem causar alagamentos, e outras fontes de energia custavam menos na época. Hoje, pesquisadores da UFMA ainda estudam o local para projetos experimentais.\n\nHoje a energia das marés ainda é pouco usada no mundo, mas é uma fonte renovável e previsível: sabemos com antecedência a hora de cada maré."
   },
   {
     "id": "0c000000-0000-4000-8000-000000000034",
@@ -235,7 +235,7 @@ export const LICOES: { id: string; trilhaSlug: string; ordem: number; titulo: st
     "ordem": 4,
     "titulo": "Juntando tudo: a energia do Brasil",
     "tipo": "texto",
-    "conteudo": "A energia que chega à sua casa vem do **Sistema Interligado Nacional**: uma grande rede de linhas de transmissão que liga usinas de quase todo o país. A energia gerada pelo vento no Maranhão pode abastecer outra região, e vice-versa.\n\nBoa parte da eletricidade do Brasil vem de fontes renováveis, como água (hidrelétricas), vento e sol. Por isso cada kWh gerado aqui solta pouco gás carbônico (CO₂): em 2023, cerca de 38,5 kg de CO₂ por MWh.\n\nMesmo assim, economizar energia continua importante: menos consumo significa menos usinas e menos linhas para construir, e uma conta mais leve para a sua família."
+    "conteudo": "A energia que chega à sua casa vem do **Sistema Interligado Nacional**: uma grande rede de linhas de transmissão que liga usinas de quase todo o país. A energia gerada pelo vento no Maranhão pode abastecer outra região, e vice-versa.\n\nBoa parte da eletricidade do Brasil vem de fontes renováveis, como água (hidrelétricas), vento e sol. Por isso cada kWh gerado aqui solta pouco gás carbônico (CO₂): em 2025, cerca de 46,1 kg de CO₂ por MWh.\n\nMesmo assim, economizar energia continua importante: menos consumo significa menos usinas e menos linhas para construir, e uma conta mais leve para a sua família."
   },
   {
     "id": "0c000000-0000-4000-8000-000000000035",
@@ -259,7 +259,7 @@ export const LICOES: { id: string; trilhaSlug: string; ordem: number; titulo: st
     "ordem": 3,
     "titulo": "Desligar antes de dormir",
     "tipo": "texto",
-    "conteudo": "O quarto continua fresco por um tempo depois que o ar é desligado. Por isso vale:\n\n- desligar o ar **30 minutos antes de dormir** ou usar o **timer** (função \"sleep\");\n- deixar o ventilador ligado no lugar do ar no fim da noite.\n\n**Quanto economiza?** Um ar de 1.000 W usado **1 hora a menos por dia**:\n\n> 1 kW × 1 h × 30 dias = **30 kWh por mês**\n\nIsso dá algo perto de R$ 27 por mês sem impostos, mais de R$ 300 por ano.\n\n**Missão:** que tal testar por 3 noites? Registre na aba Missões e ganhe pontos."
+    "conteudo": "O quarto continua fresco por um tempo depois que o ar é desligado. Por isso vale:\n\n- desligar o ar **30 minutos antes de dormir** ou usar o **timer** (função \"sleep\");\n- deixar o ventilador ligado no lugar do ar no fim da noite.\n\n**Quanto economiza?** Por exemplo, usar um ar de 1.000 W **1 hora a menos por dia**:\n\n> 1 kW × 1 h × 30 dias = **30 kWh por mês**\n\nIsso dá algo perto de R$ 27 por mês sem impostos, mais de R$ 300 por ano.\n\n**Missão:** que tal testar por 3 noites? Registre na aba Missões e ganhe pontos."
   },
   {
     "id": "0c000000-0000-4000-8000-000000000038",

@@ -56,7 +56,7 @@ describe("simulador", () => {
       custoSistemaSolar: 9372,
       retornoSolarAnos: 2.5,
       placas: 6,
-      co2EvitadoKgAno: 191.2,
+      co2EvitadoKgAno: 229,
     });
     expect(r).not.toHaveProperty("economiaMensal");
     expect(r.comoCalculamos.economiaHabitos).toBe("Meta de 10% da conta com mudança de hábitos, sem investimento: R$ 312,00 × 10%.");

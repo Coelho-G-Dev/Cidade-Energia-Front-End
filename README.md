@@ -3,7 +3,7 @@
 # ⚡ Cidade Energia — Frontend
 
 <p align="center">
-  <strong>"Sua conta de luz é a sua primeira aula de energia."</strong><br>
+  <strong>"Sua conta de luz será a sua primeira aula de energia."</strong><br>
   PWA do app educacional <strong>Cidade Energia</strong>, criado no Hackathon Equatorial (Desafio 9) para estudantes de escolas públicas de São Luís (MA).
 </p>
 

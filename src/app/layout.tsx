@@ -18,7 +18,7 @@ const figtree = Figtree({
 
 export const metadata: Metadata = {
   title: { default: "Cidade Energia", template: "%s · Cidade Energia" },
-  description: "Sua conta de luz é a sua primeira aula de energia.",
+  description: "Sua conta de luz será a sua primeira aula de energia.",
   applicationName: "Cidade Energia",
   appleWebApp: { capable: true, title: "Cidade Energia", statusBarStyle: "default" },
   formatDetection: { telephone: false },

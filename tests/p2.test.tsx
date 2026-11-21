@@ -109,6 +109,53 @@ describe("saudação", () => {
       vi.useRealTimers();
     }
   });
+
+  it("montado às 11h59, muda para Boa tarde depois das 12h e segue nas viradas de 18h e 5h sem remontar", () => {
+    vi.useFakeTimers();
+    try {
+      // 11h59 em São Luís (UTC-3) = 14h59 UTC
+      vi.setSystemTime(new Date("2026-10-22T14:59:00Z"));
+      render(<Saudacao />);
+      expect(screen.getByText("Bom dia")).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(screen.getByText("Boa tarde")).toBeInTheDocument();
+
+      // Da 12h00 até as 18h00 (6 horas)
+      act(() => {
+        vi.advanceTimersByTime(6 * 3_600_000);
+      });
+      expect(screen.getByText("Boa noite")).toBeInTheDocument();
+
+      // Das 18h00 até as 5h00 do dia seguinte (11 horas)
+      act(() => {
+        vi.advanceTimersByTime(11 * 3_600_000);
+      });
+      expect(screen.getByText("Bom dia")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reavalia a saudação quando a página volta a ficar visível", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-22T11:00:00Z")); // 08h00 em São Luís
+      render(<Saudacao />);
+      expect(screen.getByText("Bom dia")).toBeInTheDocument();
+
+      // Relógio avança enquanto a aba estava em segundo plano (sem disparar o timer ainda)
+      vi.setSystemTime(new Date("2026-10-22T22:30:00Z")); // 19h30 em São Luís
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(screen.getByText("Boa noite")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("sol mais recente", () => {

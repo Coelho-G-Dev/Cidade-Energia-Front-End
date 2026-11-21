@@ -57,7 +57,7 @@ export function TelaBoasVindas() {
         {hidratado && <PadraoAzulejo assentar={assentar} />}
       </div>
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-6 pt-7 pb-[max(2rem,env(safe-area-inset-bottom))] lg:justify-center lg:px-12 lg:py-16 deitado:pt-6 deitado:pr-[max(1.5rem,env(safe-area-inset-right))]">
-        <h1 className="text-titulo-1">Sua conta de luz é a sua primeira aula de energia</h1>
+        <h1 className="text-titulo-1">Sua conta de luz será a sua primeira aula de energia</h1>
         <p className="text-apoio">
           Descubra quanto você gasta, onde dá para economizar e como o sol de São Luís pode abastecer a sua casa.
         </p>
