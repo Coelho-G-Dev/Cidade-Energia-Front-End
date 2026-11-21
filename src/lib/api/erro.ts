@@ -31,11 +31,15 @@ const MENSAGENS: Partial<Record<CodigoErroFront, string>> = {
   CAPTCHA_FALHOU: "A verificação de segurança não passou. Tente de novo.",
   ROTA_NAO_ENCONTRADA: "Algo deu errado do nosso lado. Tente de novo.",
   METODO_NAO_PERMITIDO: "Algo deu errado do nosso lado. Tente de novo.",
+  ESCOLA_NAO_ENCONTRADA: "Não encontramos uma escola com esse código. Confira o código do professor.",
+  IMPACTO_DESLIGADO: "O painel de impacto não está configurado neste ambiente.",
 };
 
 const USAR_MENSAGEM_DO_SERVIDOR = new Set<string>([
   "ENTRADA_INVALIDA",
   "TURMA_NAO_ENCONTRADA",
+  "ESCOLA_NAO_ENCONTRADA",
+  "IMPACTO_DESLIGADO",
   "BAIRRO_OU_ESCOLA_NAO_ENCONTRADO",
   "LIMITE_DE_TROCAS",
   "LIMITE_TUTOR",

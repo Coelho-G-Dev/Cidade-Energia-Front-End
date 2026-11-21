@@ -4,10 +4,13 @@ import type {
   Bairro,
   CriarSimulacao,
   Escola,
+  FiltroPeriodoImpacto,
   ItemRanking,
   LicaoConcluida,
   LicaoDetalhada,
   Missao,
+  PainelImpacto,
+  PainelProfessor,
   PedidoResposta,
   PedidoTutor,
   Perfil,
@@ -50,4 +53,7 @@ export type ClienteApi = {
   registrarMissao(id: string): Promise<RegistroMissao>;
   listarRanking(tipo: TipoRanking): Promise<ItemRanking[]>;
   listarPontosMapa(tipo?: TipoPontoMapa): Promise<PontoMapa[]>;
+  obterPainelProfessor(codigoProfessor: string): Promise<PainelProfessor>;
+  obterImpacto(chaveImpacto: string, periodo?: FiltroPeriodoImpacto): Promise<PainelImpacto>;
+  exportarImpactoCsv(chaveImpacto: string, periodo?: FiltroPeriodoImpacto): Promise<string>;
 };

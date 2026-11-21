@@ -24,7 +24,28 @@ import type { FonteSessao } from "../sessao";
 import type { ClienteApi } from "../tipos";
 import { ErroCalculo, simular, type EntradaSimulacao } from "./calculo";
 import { APARELHOS, BAIRROS, CONQUISTAS, ESCOLAS, LICOES, MISSOES, PERGUNTAS, PONTOS_MAPA, TRILHAS } from "./conteudo";
+import {
+  CHAVE_IMPACTO_SIMULADA,
+  CODIGO_PROFESSOR_OCULTO_SIMULADO,
+  CODIGO_PROFESSOR_SIMULADO,
+  gerarCsvImpacto,
+  IMPACTO_SIMULADO,
+  PAINEL_PROFESSOR_OCULTO_SIMULADO,
+  PAINEL_PROFESSOR_SIMULADO,
+  validarPeriodoImpacto,
+} from "./painel";
 import { responderTutorSimulado } from "./tutor";
+
+export {
+  CHAVE_IMPACTO_SIMULADA,
+  CODIGO_PROFESSOR_OCULTO_SIMULADO,
+  CODIGO_PROFESSOR_SIMULADO,
+  gerarCsvImpacto,
+  IMPACTO_SIMULADO,
+  PAINEL_PROFESSOR_OCULTO_SIMULADO,
+  PAINEL_PROFESSOR_SIMULADO,
+  validarPeriodoImpacto,
+} from "./painel";
 import {
   conquistasMerecidas,
   diaEHora,
@@ -59,6 +80,8 @@ const LIMITE_TROCAS = 3;
 const MINIMO_PARTICIPANTES_RANKING = 3;
 const JANELA_TROCAS_MS = 30 * 24 * 3_600_000;
 const LIMITE_TUTOR_POR_HORA = 20;
+const LIMITE_PROFESSOR_POR_MINUTO = 30;
+const MINUTO_MS = 60_000;
 const HORA_MS = 3_600_000;
 const TOKEN_SIMULADO = "token-do-modo-simulado";
 // Guarda só o sinal de que entrou, para o modo simulado sobreviver a um recarregar. Nenhum dado pessoal.
@@ -91,6 +114,7 @@ type Estado = {
   registros: Map<string, Set<string>>;
   simulacoes: SimulacaoSalva[];
   usosTutor: number[];
+  tentativasProfessor: number[];
 };
 
 function estadoInicial(agora: Date, logado = false): Estado {
@@ -112,6 +136,7 @@ function estadoInicial(agora: Date, logado = false): Estado {
     registros: new Map(),
     simulacoes: [],
     usosTutor: [],
+    tentativasProfessor: [],
   };
 }
 
@@ -560,6 +585,49 @@ export function criarSimulado({ atrasoMs = 450, agora = () => new Date(), aleato
       await esperar();
       const filtro = validar(mapaSchema, { tipo }).tipo;
       return copia(PONTOS_MAPA.filter((p) => !filtro || p.tipo === filtro));
+    },
+    async obterPainelProfessor(codigoProfessor) {
+      await esperar();
+      const agoraMs = agora().getTime();
+      estado.tentativasProfessor = estado.tentativasProfessor.filter((t) => agoraMs - t < MINUTO_MS);
+      if (estado.tentativasProfessor.length >= LIMITE_PROFESSOR_POR_MINUTO) {
+        throw new ErroApi(429, "LIMITE_DE_REQUISICOES", "Muitas tentativas seguidas. Espere um minuto e tente de novo.");
+      }
+      estado.tentativasProfessor.push(agoraMs);
+
+      const codigo = codigoProfessor.trim().toUpperCase();
+      const dadosAte = diaEmSaoLuis(new Date(agoraMs - 86_400_000));
+      if (codigo === CODIGO_PROFESSOR_SIMULADO) {
+        return copia({ ...PAINEL_PROFESSOR_SIMULADO, atualizadoEm: agora().toISOString(), dadosAte });
+      }
+      if (codigo === CODIGO_PROFESSOR_OCULTO_SIMULADO) {
+        return copia({ ...PAINEL_PROFESSOR_OCULTO_SIMULADO, atualizadoEm: agora().toISOString(), dadosAte });
+      }
+      throw naoEncontrado("ESCOLA_NAO_ENCONTRADA", "Não encontramos uma escola com esse código. Confira o código do professor.");
+    },
+    async obterImpacto(chaveImpacto, periodo) {
+      await esperar();
+      if (chaveImpacto.trim() !== CHAVE_IMPACTO_SIMULADA) {
+        throw new ErroApi(401, "NAO_AUTENTICADO", "Chave de acesso inválida.");
+      }
+      const intervalo = validarPeriodoImpacto(periodo);
+      return copia({
+        ...IMPACTO_SIMULADO,
+        periodo: intervalo,
+        atualizadoEm: agora().toISOString(),
+      });
+    },
+    async exportarImpactoCsv(chaveImpacto, periodo) {
+      await esperar();
+      if (chaveImpacto.trim() !== CHAVE_IMPACTO_SIMULADA) {
+        throw new ErroApi(401, "NAO_AUTENTICADO", "Chave de acesso inválida.");
+      }
+      const intervalo = validarPeriodoImpacto(periodo);
+      return gerarCsvImpacto({
+        ...IMPACTO_SIMULADO,
+        periodo: intervalo,
+        atualizadoEm: agora().toISOString(),
+      });
     },
   };
 

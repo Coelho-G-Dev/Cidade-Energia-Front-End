@@ -185,3 +185,45 @@
 .leaflet-container a {
   color: var(--color-primaria);
 }
+
+/* Impressão A4 em uma página, legível em preto e branco, para o relatório do painel de impacto (D-006 / T-027). */
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm;
+}
+
+@media print {
+  html,
+  body {
+    min-height: auto !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+    line-height: 1.35 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .ocultar-impressao {
+    display: none !important;
+  }
+
+  .painel-impacto-impressao {
+    max-width: 100% !important;
+    padding: 0 !important;
+    gap: 8pt !important;
+  }
+
+  .painel-impacto-impressao * {
+    box-shadow: none !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+    background-color: #ffffff !important;
+  }
+
+  .painel-impacto-impressao section,
+  .painel-impacto-impressao article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

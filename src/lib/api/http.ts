@@ -8,6 +8,8 @@ export type Pedido = {
   corpo?: unknown;
   autenticacao: Autenticacao;
   sinal?: AbortSignal;
+  cabecalhos?: Record<string, string>;
+  formato?: "json" | "texto";
 };
 
 export type Requisitar = <T>(caminho: string, pedido: Pedido) => Promise<T>;
@@ -20,7 +22,10 @@ type Dependencias = {
 
 export function criarRequisicao({ apiUrl, sessao, buscar = (...args) => fetch(...args) }: Dependencias): Requisitar {
   async function enviar(caminho: string, pedido: Pedido, token: string | null): Promise<Response> {
-    const cabecalhos: Record<string, string> = { Accept: "application/json" };
+    const cabecalhos: Record<string, string> = {
+      Accept: pedido.formato === "texto" ? "text/csv, application/json" : "application/json",
+      ...pedido.cabecalhos,
+    };
     if (pedido.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
     if (token) cabecalhos.Authorization = `Bearer ${token}`;
     try {
@@ -36,7 +41,13 @@ export function criarRequisicao({ apiUrl, sessao, buscar = (...args) => fetch(..
     }
   }
 
-  async function ler<T>(resposta: Response): Promise<T> {
+  async function ler<T>(resposta: Response, formato: "json" | "texto" = "json"): Promise<T> {
+    if (resposta.ok && formato === "texto") {
+      const bytes = new Uint8Array(await resposta.arrayBuffer());
+      const temBom = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
+      const texto = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes);
+      return (temBom && !texto.startsWith("\uFEFF") ? `\uFEFF${texto}` : texto) as T;
+    }
     let corpo: unknown;
     try {
       corpo = await resposta.json();
@@ -49,7 +60,7 @@ export function criarRequisicao({ apiUrl, sessao, buscar = (...args) => fetch(..
   }
 
   return async function requisitar<T>(caminho: string, pedido: Pedido): Promise<T> {
-    if (pedido.autenticacao === "nenhuma") return ler<T>(await enviar(caminho, pedido, null));
+    if (pedido.autenticacao === "nenhuma") return ler<T>(await enviar(caminho, pedido, null), pedido.formato);
 
     const token = await sessao.token();
     if (!token && pedido.autenticacao === "exigida") {
@@ -57,10 +68,10 @@ export function criarRequisicao({ apiUrl, sessao, buscar = (...args) => fetch(..
     }
 
     const resposta = await enviar(caminho, pedido, token);
-    if (resposta.status !== 401 || !token) return ler<T>(resposta);
+    if (resposta.status !== 401 || !token) return ler<T>(resposta, pedido.formato);
 
     const renovado = await sessao.renovar();
-    if (!renovado) return ler<T>(resposta);
-    return ler<T>(await enviar(caminho, pedido, renovado));
+    if (!renovado) return ler<T>(resposta, pedido.formato);
+    return ler<T>(await enviar(caminho, pedido, renovado), pedido.formato);
   };
 }

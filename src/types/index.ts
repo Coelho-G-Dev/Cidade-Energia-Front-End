@@ -2,6 +2,7 @@ export * from "./catalogos";
 export * from "./erros";
 export * from "./gamificacao";
 export * from "./missoes";
+export * from "./painel";
 export * from "./perfil";
 export * from "./quiz";
 export * from "./rankings";

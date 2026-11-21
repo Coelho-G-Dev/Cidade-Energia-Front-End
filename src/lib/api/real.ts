@@ -1,7 +1,17 @@
+import type { FiltroPeriodoImpacto } from "@/types";
 import type { Requisitar } from "./http";
 import type { ClienteApi } from "./tipos";
 
 const id = (valor: string) => encodeURIComponent(valor);
+
+function queryImpacto(periodo?: FiltroPeriodoImpacto, prefixo = ""): string {
+  const params = new URLSearchParams();
+  if (prefixo) params.set("formato", prefixo);
+  if (periodo?.de) params.set("de", periodo.de);
+  if (periodo?.ate) params.set("ate", periodo.ate);
+  const texto = params.toString();
+  return texto ? `?${texto}` : "";
+}
 
 export function criarClienteReal(requisitar: Requisitar): ClienteApi {
   return {
@@ -33,5 +43,21 @@ export function criarClienteReal(requisitar: Requisitar): ClienteApi {
     listarRanking: (tipo) => requisitar(`/api/rankings?tipo=${tipo}`, { autenticacao: "nenhuma" }),
     listarPontosMapa: (tipo) =>
       requisitar(tipo ? `/api/mapa/pontos?tipo=${tipo}` : "/api/mapa/pontos", { autenticacao: "nenhuma" }),
+    obterPainelProfessor: (codigoProfessor) =>
+      requisitar("/api/professor/escola", {
+        autenticacao: "nenhuma",
+        cabecalhos: { "X-Codigo-Professor": codigoProfessor },
+      }),
+    obterImpacto: (chaveImpacto, periodo) =>
+      requisitar(`/api/impacto${queryImpacto(periodo)}`, {
+        autenticacao: "nenhuma",
+        cabecalhos: { "X-Chave-Impacto": chaveImpacto },
+      }),
+    exportarImpactoCsv: (chaveImpacto, periodo) =>
+      requisitar(`/api/impacto/exportar${queryImpacto(periodo, "csv")}`, {
+        autenticacao: "nenhuma",
+        formato: "texto",
+        cabecalhos: { "X-Chave-Impacto": chaveImpacto },
+      }),
   };
 }
