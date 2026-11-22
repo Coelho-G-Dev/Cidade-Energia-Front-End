@@ -41,32 +41,55 @@ export function CardTrilha({ trilha }: { trilha: ResumoTrilha }) {
   // Ao encostar no card, a trilha já começa a vir: o "continuar" só espera a lição.
   const adiantar = () => preCarregar(`trilha-${trilha.slug}`, () => api.obterTrilha(trilha.slug));
   return (
-    <Link
-      href={`/trilhas/${trilha.slug}/continuar`}
-      onPointerEnter={adiantar}
-      onPointerDown={adiantar}
-      onFocus={adiantar}
-      data-direcao="expandir"
-      className="afundar relative block h-full rounded-cartao text-tinta no-underline shadow-azulejo"
-    >
-      <motion.span
-        layoutId={`trilha-${trilha.slug}`}
-        transition={MOLA_CURTA}
-        className="absolute inset-0 rounded-cartao border-2 border-tinta bg-superficie"
-      />
-      <span className="relative flex items-center gap-3 p-3.5">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-pequeno bg-primaria-suave text-primaria">
-          <Icone nome={iconeDoTema(trilha.tema)} tamanho={22} />
+    <div className="flex h-full flex-col gap-2">
+      <Link
+        href={`/trilhas/${trilha.slug}/continuar`}
+        onPointerEnter={adiantar}
+        onPointerDown={adiantar}
+        onFocus={adiantar}
+        data-direcao="expandir"
+        className="afundar relative block flex-1 rounded-cartao text-tinta no-underline shadow-azulejo"
+      >
+        <motion.span
+          layoutId={`trilha-${trilha.slug}`}
+          transition={MOLA_CURTA}
+          className="absolute inset-0 rounded-cartao border-2 border-tinta bg-superficie"
+        />
+        <span className="relative flex items-center gap-3 p-3.5">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-pequeno bg-primaria-suave text-primaria">
+            <Icone nome={iconeDoTema(trilha.tema)} tamanho={22} />
+          </span>
+          <span className="flex flex-1 flex-col gap-1.5">
+            <span className="font-bold">{trilha.titulo}</span>
+            <span className="text-pequeno text-apoio">{situacao(trilha)}</span>
+            {trilha.licoesConcluidas > 0 && (
+              <BarraProgresso
+                valor={trilha.licoesConcluidas}
+                total={trilha.totalLicoes}
+                rotulo={`Progresso em ${trilha.titulo}`}
+                tom={trilha.concluida ? "sucesso" : "primaria"}
+              />
+            )}
+          </span>
         </span>
-        <span className="flex flex-1 flex-col gap-1.5">
-          <span className="font-bold">{trilha.titulo}</span>
-          <span className="text-pequeno text-apoio">{situacao(trilha)}</span>
-          {trilha.licoesConcluidas > 0 && (
-            <BarraProgresso valor={trilha.licoesConcluidas} total={trilha.totalLicoes} rotulo={`Progresso em ${trilha.titulo}`} tom={trilha.concluida ? "sucesso" : "primaria"} />
-          )}
-        </span>
-      </span>
-    </Link>
+      </Link>
+      {trilha.licoesConcluidas === 0 && (
+        <Link
+          href={`/trilhas/${trilha.slug}/diagnostico?momento=antes`}
+          className="afundar-leve inline-flex min-h-11 items-center gap-1.5 self-start rounded-pequeno px-2 text-pequeno font-bold text-primaria underline underline-offset-2"
+        >
+          Ver o que você já sabe
+        </Link>
+      )}
+      {trilha.concluida && (
+        <Link
+          href={`/trilhas/${trilha.slug}/diagnostico?momento=depois`}
+          className="afundar-leve inline-flex min-h-11 items-center gap-1.5 self-start rounded-pequeno px-2 text-pequeno font-bold text-sucesso underline underline-offset-2"
+        >
+          Ver o quanto você aprendeu
+        </Link>
+      )}
+    </div>
   );
 }
 

@@ -10,7 +10,7 @@
 export const VALIDADE_MS = 60_000;
 
 /** Chaves que mudam quando uma lição ou o Pedale é concluído. */
-export const AFETADAS_POR_LICAO = ["trilhas", "trilha-", "licao-", "quiz-", "resumo"] as const;
+export const AFETADAS_POR_LICAO = ["trilhas", "trilha-", "licao-", "quiz-", "diagnostico-", "resumo"] as const;
 
 export type Entrada<T = unknown> = {
   readonly dados?: T;

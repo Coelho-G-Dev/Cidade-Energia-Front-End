@@ -12,6 +12,7 @@ import { Markdown } from "@/components/app/Markdown";
 import { BarraProgresso } from "@/components/ui/BarraProgresso";
 import { Botao, BotaoLink } from "@/components/ui/Botao";
 import { MensagemErro } from "@/components/ui/Campo";
+import { Card } from "@/components/ui/Card";
 import { Icone } from "@/components/ui/Icone";
 import { Topo } from "@/components/ui/Topo";
 import { api, ErroApi, mensagemParaPessoa } from "@/lib/api";
@@ -74,6 +75,16 @@ export function TelaLicao({ slug, licaoId }: Props) {
 
   // Sem login nada é salvo, então a ordem das lições só vale para quem entrou.
   const pendente = licao.estado === "pronto" && temSessao ? licao.dados.licaoPendente : null;
+  const nenhumaLicaoConcluida =
+    trilha.estado === "pronto" &&
+    licao.estado === "pronto" &&
+    (trilha.dados.licoesConcluidas ?? 0) === 0 &&
+    !licao.dados.concluida &&
+    !trilha.dados.licoes?.some((l) => l.concluida);
+  const trilhaTodaConcluida =
+    trilha.estado === "pronto" &&
+    licao.estado === "pronto" &&
+    (Boolean(trilha.dados.concluida) || (licao.dados.proximaLicaoId === null && licao.dados.concluida));
 
   async function concluir(evento: MouseEvent<HTMLButtonElement>) {
     if (licao.estado !== "pronto" || !passo) return;
@@ -121,6 +132,32 @@ export function TelaLicao({ slug, licaoId }: Props) {
                 </span>
               )}
               <h1 className="text-titulo-1">{licao.dados.titulo}</h1>
+              {temSessao && nenhumaLicaoConcluida && (
+                <Card tom="primaria" sombra={false} className="flex flex-wrap items-center justify-between gap-3 p-3.5">
+                  <div className="flex flex-col gap-0.5">
+                    <strong className="text-sm">Antes de começar: responda 4 perguntas rápidas</strong>
+                    <span className="text-pequeno text-apoio">
+                      Não vale pontos e você pode pular quando quiser.
+                    </span>
+                  </div>
+                  <BotaoLink href={`/trilhas/${slug}/diagnostico?momento=antes`} variante="secundario">
+                    Ver o que você já sabe
+                  </BotaoLink>
+                </Card>
+              )}
+              {temSessao && trilhaTodaConcluida && (
+                <Card tom="sucesso" sombra={false} className="flex flex-wrap items-center justify-between gap-3 p-3.5">
+                  <div className="flex flex-col gap-0.5">
+                    <strong className="text-sm">Trilha concluída! Compare com suas respostas do início</strong>
+                    <span className="text-pequeno text-apoio">
+                      Responda as 4 perguntas finais para ver seus acertos antes e agora.
+                    </span>
+                  </div>
+                  <BotaoLink href={`/trilhas/${slug}/diagnostico?momento=depois`} variante="secundario">
+                    Ver o quanto você aprendeu
+                  </BotaoLink>
+                </Card>
+              )}
               <Markdown texto={licao.dados.conteudo} />
               {pendente && (
                 <AvisoLicaoTravada

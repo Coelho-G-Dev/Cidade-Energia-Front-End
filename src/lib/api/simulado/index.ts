@@ -15,15 +15,25 @@ import type {
 
   TipoRanking,
 } from "@/types";
-import { idSchema, mapaSchema, pedaleSchema, rankingSchema, responderSchema, slugSchema } from "@/lib/validacao/conteudo";
+import {
+  enviarDiagnosticoSchema,
+  idSchema,
+  mapaSchema,
+  momentoDiagnosticoSchema,
+  pedaleSchema,
+  rankingSchema,
+  responderSchema,
+  slugSchema,
+} from "@/lib/validacao/conteudo";
 import { atualizarPerfilSchema, filtroEscolasSchema } from "@/lib/validacao/perfil";
 import { criarSimulacaoSchema } from "@/lib/validacao/simulacao";
-import { tutorSchema } from "@/lib/validacao/tutor";
+import { avaliarTutorSchema, tutorSchema } from "@/lib/validacao/tutor";
 import { ErroApi } from "../erro";
 import type { FonteSessao } from "../sessao";
 import type { ClienteApi } from "../tipos";
 import { ErroCalculo, simular, type EntradaSimulacao } from "./calculo";
 import { APARELHOS, BAIRROS, CONQUISTAS, ESCOLAS, LICOES, MISSOES, PERGUNTAS, PONTOS_MAPA, TRILHAS } from "./conteudo";
+import { PERGUNTAS_DIAGNOSTICO, perguntasDiagnosticoSemGabarito } from "./diagnostico";
 import {
   CHAVE_IMPACTO_SIMULADA,
   CODIGO_PROFESSOR_OCULTO_SIMULADO,
@@ -36,12 +46,14 @@ import {
 } from "./painel";
 import { responderTutorSimulado } from "./tutor";
 
+export { PERGUNTAS_DIAGNOSTICO, perguntasDiagnosticoSemGabarito } from "./diagnostico";
 export {
   CHAVE_IMPACTO_SIMULADA,
   CODIGO_PROFESSOR_OCULTO_SIMULADO,
   CODIGO_PROFESSOR_SIMULADO,
   gerarCsvImpacto,
   IMPACTO_SIMULADO,
+  NOTA_DIAGNOSTICO_PAINEL,
   PAINEL_PROFESSOR_OCULTO_SIMULADO,
   PAINEL_PROFESSOR_SIMULADO,
   validarPeriodoImpacto,
@@ -115,6 +127,9 @@ type Estado = {
   simulacoes: SimulacaoSalva[];
   usosTutor: number[];
   tentativasProfessor: number[];
+  diagnosticoAntes: Map<string, Map<string, number>>;
+  diagnosticoDepois: Map<string, Map<string, number>>;
+  respostasTutor: Map<string, { perfilId: string; avaliada: boolean; util?: boolean; motivo?: string }>;
 };
 
 function estadoInicial(agora: Date, logado = false): Estado {
@@ -137,6 +152,9 @@ function estadoInicial(agora: Date, logado = false): Estado {
     simulacoes: [],
     usosTutor: [],
     tentativasProfessor: [],
+    diagnosticoAntes: new Map(),
+    diagnosticoDepois: new Map(),
+    respostasTutor: new Map(),
   };
 }
 
@@ -456,7 +474,13 @@ export function criarSimulado({ atrasoMs = 450, agora = () => new Date(), aleato
         );
       }
       estado.usosTutor.push(agoraMs);
-      return responderTutorSimulado(corpo.mensagem);
+      const numeroResposta = estado.respostasTutor.size + 1;
+      const respostaId = `0a100000-0000-4000-8000-${String(numeroResposta).padStart(12, "0")}`;
+      estado.respostasTutor.set(respostaId, { perfilId: estado.perfil.id, avaliada: false });
+      return {
+        ...responderTutorSimulado(corpo.mensagem),
+        respostaId,
+      };
     },
     async listarTrilhas() {
       await esperar();
@@ -628,6 +652,128 @@ export function criarSimulado({ atrasoMs = 450, agora = () => new Date(), aleato
         periodo: intervalo,
         atualizadoEm: agora().toISOString(),
       });
+    },
+    async obterDiagnostico(slug, momento) {
+      await esperar();
+      exigirLogin();
+      const slugValido = validar(slugSchema, slug);
+      const momentoValido = validar(momentoDiagnosticoSchema, momento);
+      const trilha = TRILHAS.find((t) => t.slug === slugValido);
+      if (!trilha) throw naoEncontrado("TRILHA_NAO_ENCONTRADA", "Trilha não encontrada.");
+
+      const licoesDaTrilha = LICOES.filter((l) => l.trilhaSlug === trilha.slug);
+      const feitas = licoesDaTrilha.filter((l) => estado.licoesConcluidas.has(l.id)).length;
+      const respondidoAntes = estado.diagnosticoAntes.has(trilha.slug);
+      const respondidoDepois = estado.diagnosticoDepois.has(trilha.slug);
+
+      const respondido = momentoValido === "antes" ? respondidoAntes : respondidoDepois;
+      const disponivel =
+        momentoValido === "antes"
+          ? !respondido && feitas === 0
+          : !respondido && feitas === licoesDaTrilha.length && respondidoAntes;
+
+      return {
+        momento: momentoValido,
+        disponivel,
+        respondido,
+        // Nunca devolve indiceCorreto nem explicacao; com indisponível ou já respondido, perguntas vem [].
+        perguntas: disponivel && !respondido ? perguntasDiagnosticoSemGabarito(trilha.slug) : [],
+      };
+    },
+    async enviarDiagnostico(slug, dados) {
+      await esperar();
+      exigirLogin();
+      const slugValido = validar(slugSchema, slug);
+      const trilha = TRILHAS.find((t) => t.slug === slugValido);
+      if (!trilha) throw naoEncontrado("TRILHA_NAO_ENCONTRADA", "Trilha não encontrada.");
+      const corpo = validar(enviarDiagnosticoSchema, dados);
+
+      const licoesDaTrilha = LICOES.filter((l) => l.trilhaSlug === trilha.slug);
+      const feitas = licoesDaTrilha.filter((l) => estado.licoesConcluidas.has(l.id)).length;
+      const respondidoAntes = estado.diagnosticoAntes.has(trilha.slug);
+      const respondidoDepois = estado.diagnosticoDepois.has(trilha.slug);
+
+      if ((corpo.momento === "antes" && respondidoAntes) || (corpo.momento === "depois" && respondidoDepois)) {
+        throw new ErroApi(409, "DIAGNOSTICO_JA_RESPONDIDO", "Você já respondeu este diagnóstico.");
+      }
+
+      if (corpo.momento === "antes" && feitas > 0) {
+        throw new ErroApi(
+          409,
+          "DIAGNOSTICO_INDISPONIVEL",
+          "O diagnóstico inicial só fica disponível antes de concluir a primeira lição da trilha.",
+        );
+      }
+
+      if (corpo.momento === "depois" && (feitas < licoesDaTrilha.length || !respondidoAntes)) {
+        throw new ErroApi(
+          409,
+          "DIAGNOSTICO_INDISPONIVEL",
+          "Conclua todas as lições da trilha e o diagnóstico inicial antes de responder o diagnóstico final.",
+        );
+      }
+
+      const perguntasTrilha = PERGUNTAS_DIAGNOSTICO.filter((p) => p.trilhaSlug === trilha.slug).sort(
+        (a, b) => a.ordem - b.ordem,
+      );
+      if (corpo.respostas.length !== perguntasTrilha.length) {
+        throw new ErroApi(400, "ENTRADA_INVALIDA", "Responda todas as perguntas do diagnóstico.");
+      }
+
+      const mapaOpcoes = new Map<string, number>();
+      for (const r of corpo.respostas) {
+        if (mapaOpcoes.has(r.perguntaId)) {
+          throw new ErroApi(400, "ENTRADA_INVALIDA", "Pergunta repetida no envio do diagnóstico.");
+        }
+        const pergunta = perguntasTrilha.find((p) => p.id === r.perguntaId);
+        if (!pergunta) {
+          throw new ErroApi(400, "ENTRADA_INVALIDA", "Pergunta não pertence a esta trilha.");
+        }
+        if (r.opcao < 0 || r.opcao >= pergunta.opcoes.length) {
+          throw new ErroApi(400, "ENTRADA_INVALIDA", "Escolha uma das opções da pergunta.");
+        }
+        mapaOpcoes.set(r.perguntaId, r.opcao);
+      }
+
+      if (corpo.momento === "antes") {
+        estado.diagnosticoAntes.set(trilha.slug, mapaOpcoes);
+        return { momento: "antes", registrado: true };
+      }
+
+      estado.diagnosticoDepois.set(trilha.slug, mapaOpcoes);
+      const mapaAntes = estado.diagnosticoAntes.get(trilha.slug)!;
+      const detalhes = perguntasTrilha.map((p) => ({
+        perguntaId: p.id,
+        indiceCorreto: p.indiceCorreto,
+        acertouAntes: mapaAntes.get(p.id) === p.indiceCorreto,
+        acertouDepois: mapaOpcoes.get(p.id) === p.indiceCorreto,
+        explicacao: p.explicacao,
+      }));
+      return {
+        momento: "depois",
+        registrado: true,
+        total: perguntasTrilha.length,
+        acertosAntes: detalhes.filter((d) => d.acertouAntes).length,
+        acertosDepois: detalhes.filter((d) => d.acertouDepois).length,
+        perguntas: detalhes,
+      };
+    },
+    async avaliarTutor(dados) {
+      await esperar();
+      exigirLogin();
+      const corpo = validar(avaliarTutorSchema, dados);
+      const registro = estado.respostasTutor.get(corpo.respostaId);
+      if (!registro || registro.perfilId !== estado.perfil.id) {
+        throw naoEncontrado("RESPOSTA_NAO_ENCONTRADA", "Não encontramos essa resposta para avaliar.");
+      }
+      if (registro.avaliada) {
+        throw new ErroApi(409, "AVALIACAO_JA_REGISTRADA", "Você já avaliou esta resposta.");
+      }
+      // Grava apenas o voto e o motivo opcional, nunca texto da conversa (D-013, seção 3b).
+      registro.avaliada = true;
+      registro.util = corpo.util;
+      registro.motivo = corpo.motivo;
+      return { registrado: true };
     },
   };
 

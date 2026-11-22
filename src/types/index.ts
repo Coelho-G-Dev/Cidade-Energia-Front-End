@@ -1,4 +1,5 @@
 export * from "./catalogos";
+export * from "./diagnostico";
 export * from "./erros";
 export * from "./gamificacao";
 export * from "./missoes";

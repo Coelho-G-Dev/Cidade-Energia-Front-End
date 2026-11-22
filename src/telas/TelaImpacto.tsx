@@ -12,7 +12,14 @@ import { api, ErroApi, mensagemParaPessoa, modoSimulado } from "@/lib/api";
 import { CHAVE_IMPACTO_SIMULADA } from "@/lib/api/simulado";
 import { brl, dataCurta, diaEHora, numero } from "@/lib/conteudo";
 import type { FiltroPeriodoImpacto, PainelImpacto } from "@/types";
-import { percentualOuOculto, TEXTO_MENOS_DE_3, TEXTO_MENOS_DE_5_RESPOSTAS, valorOuOculto } from "./TelaProfessor";
+import {
+  formatarAntesDepois,
+  NOTA_COMPARACAO_DIAGNOSTICO,
+  percentualOuOculto,
+  TEXTO_MENOS_DE_3,
+  TEXTO_MENOS_DE_5_RESPOSTAS,
+  valorOuOculto,
+} from "./TelaProfessor";
 
 export function formatarPeriodoImpacto(de: string, ate: string): string {
   const [anoDe, mesDe, diaDe] = de.slice(0, 10).split("-");
@@ -358,9 +365,68 @@ export function TelaImpacto() {
                       : TEXTO_MENOS_DE_3
                   }
                 />
+                {impacto.energinho && (
+                  <ItemIndicador
+                    rotulo="Respostas do Energinho avaliadas como úteis"
+                    valor={percentualOuOculto(impacto.energinho.percentualUtil)}
+                    complemento={
+                      impacto.energinho.respostasAvaliadas !== null
+                        ? `${numero(impacto.energinho.respostasAvaliadas, 0)} respostas avaliadas`
+                        : TEXTO_MENOS_DE_3
+                    }
+                  />
+                )}
               </div>
             </Card>
           </div>
+
+          {impacto.aprendizado.diagnostico && (
+            <Card className="flex flex-col gap-3 p-4">
+              <div className="flex flex-col gap-0.5">
+                <h2 className="text-titulo-3">Diagnóstico antes e depois</h2>
+                <p className="text-pequeno text-apoio">{NOTA_COMPARACAO_DIAGNOSTICO}</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <ItemIndicador
+                  rotulo="Acertos no diagnóstico"
+                  valor={formatarAntesDepois(
+                    impacto.aprendizado.diagnostico.acertoMedioAntes,
+                    impacto.aprendizado.diagnostico.acertoMedioDepois,
+                  )}
+                />
+                <ItemIndicador
+                  rotulo="Estudantes com antes e depois"
+                  valor={valorOuOculto(impacto.aprendizado.diagnostico.estudantes, (n) => `${numero(n, 0)} estudantes`)}
+                />
+              </div>
+              {impacto.aprendizado.diagnostico.porTrilha.length > 0 && (
+                <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                  {impacto.aprendizado.diagnostico.porTrilha.map((trilha) => (
+                    <li
+                      key={trilha.slug}
+                      className="flex flex-col gap-1 rounded-pequeno border-2 border-tinta bg-superficie p-3"
+                    >
+                      <span className="text-sm font-bold">{trilha.titulo}</span>
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-pequeno">
+                        <span className="text-apoio">
+                          Estudantes:{" "}
+                          <strong className="text-tinta">
+                            {valorOuOculto(trilha.estudantes, (n) => `${numero(n, 0)} estudantes`)}
+                          </strong>
+                        </span>
+                        <span className="text-apoio">
+                          Acertos:{" "}
+                          <strong className="text-tinta">
+                            {formatarAntesDepois(trilha.acertoMedioAntes, trilha.acertoMedioDepois)}
+                          </strong>
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
 
           <p className="text-pequeno text-apoio">
             Grupos com menos de 3 estudantes ficam ocultos e percentuais exigem pelo menos 5 respostas. Nenhum dado individual aparece.

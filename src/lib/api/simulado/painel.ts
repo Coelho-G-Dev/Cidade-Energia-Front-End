@@ -82,6 +82,43 @@ export const PAINEL_PROFESSOR_SIMULADO: PainelProfessor = {
       },
     ],
   },
+  diagnostico: [
+    {
+      slug: "energia-solar-em-sao-luis",
+      titulo: "Energia solar em São Luís",
+      estudantes: 10,
+      acertoMedioAntes: 48,
+      acertoMedioDepois: 80,
+    },
+    {
+      slug: "a-energia-do-maranhao",
+      titulo: "A energia do Maranhão: sol, vento e marés",
+      estudantes: 8,
+      acertoMedioAntes: 46.9,
+      acertoMedioDepois: 78.1,
+    },
+    {
+      slug: "ar-condicionado-sem-susto",
+      titulo: "Ar-condicionado sem susto",
+      estudantes: 6,
+      acertoMedioAntes: 50,
+      acertoMedioDepois: 83.3,
+    },
+    {
+      slug: "entendendo-a-sua-conta-de-luz",
+      titulo: "Entendendo a sua conta de luz",
+      estudantes: 4,
+      acertoMedioAntes: null,
+      acertoMedioDepois: null,
+    },
+    {
+      slug: "lixo-eletronico-onde-descartar",
+      titulo: "Lixo eletrônico: onde descartar",
+      estudantes: null,
+      acertoMedioAntes: null,
+      acertoMedioDepois: null,
+    },
+  ],
   missoes: [
     {
       slug: "ar-desligado-antes-de-dormir",
@@ -115,6 +152,7 @@ export const PAINEL_PROFESSOR_OCULTO_SIMULADO: PainelProfessor = {
   oculto: true,
   progresso: null,
   quiz: null,
+  diagnostico: null,
   missoes: null,
   simulacoes: null,
   atualizadoEm: "2026-11-20T14:00:00.000Z",
@@ -131,6 +169,48 @@ export const IMPACTO_SIMULADO: PainelImpacto = {
     trilhasConcluidas: 402,
     respostasDoQuiz: 4410,
     percentualAcertos: 68.2,
+    diagnostico: {
+      estudantes: 185,
+      acertoMedioAntes: 48,
+      acertoMedioDepois: 80,
+      porTrilha: [
+        {
+          slug: "energia-solar-em-sao-luis",
+          titulo: "Energia solar em São Luís",
+          estudantes: 64,
+          acertoMedioAntes: 48,
+          acertoMedioDepois: 80,
+        },
+        {
+          slug: "a-energia-do-maranhao",
+          titulo: "A energia do Maranhão: sol, vento e marés",
+          estudantes: 48,
+          acertoMedioAntes: 45.8,
+          acertoMedioDepois: 79.2,
+        },
+        {
+          slug: "ar-condicionado-sem-susto",
+          titulo: "Ar-condicionado sem susto",
+          estudantes: 39,
+          acertoMedioAntes: 51.3,
+          acertoMedioDepois: 82.1,
+        },
+        {
+          slug: "entendendo-a-sua-conta-de-luz",
+          titulo: "Entendendo a sua conta de luz",
+          estudantes: 22,
+          acertoMedioAntes: 47.7,
+          acertoMedioDepois: 77.3,
+        },
+        {
+          slug: "lixo-eletronico-onde-descartar",
+          titulo: "Lixo eletrônico: onde descartar",
+          estudantes: 12,
+          acertoMedioAntes: 50,
+          acertoMedioDepois: 81.3,
+        },
+      ],
+    },
   },
   missoes: { registros: 512, concluidas: 140 },
   simulacoes: { salvas: 388, estudantesQueSimularam: 301 },
@@ -140,6 +220,10 @@ export const IMPACTO_SIMULADO: PainelImpacto = {
       potencialHabitos:
         "Soma da economia mensal com mudança de hábitos da última simulação salva de cada estudante (kWh = reais ÷ tarifa daquela simulação). É o que as famílias poderiam economizar por mês seguindo as dicas; não é economia medida.",
     },
+  },
+  energinho: {
+    respostasAvaliadas: 140,
+    percentualUtil: 82.1,
   },
   estimativa: true,
   atualizadoEm: "2026-11-20T14:00:00.000Z",
@@ -195,12 +279,23 @@ function gerarCsv(linhas: readonly (readonly Celula[])[]): string {
   );
 }
 
-type IndicadorCsv = { indicador: string; valor: number | null; unidade: string; observacao?: string };
+type IndicadorCsv = {
+  indicador: string;
+  valor: number | null;
+  unidade: string;
+  observacao?: string;
+  motivoOculto?: string;
+};
+
+export const NOTA_DIAGNOSTICO_PAINEL =
+  "Compara os mesmos estudantes antes e depois da trilha. Não há grupo de comparação, então não mede só o efeito do app.";
 
 export function gerarCsvImpacto(impacto: PainelImpacto): string {
   const i = impacto;
   const p = i.economiaEstimada.potencialHabitos;
   const calculo = i.economiaEstimada.comoCalculamos.potencialHabitos;
+  const diag = i.aprendizado.diagnostico;
+  const energinho = i.energinho;
   const indicadores: IndicadorCsv[] = [
     { indicador: "Estudantes com perfil", valor: i.estudantes.comPerfil, unidade: "estudantes" },
     { indicador: "Estudantes ativos no período", valor: i.estudantes.ativosNoPeriodo, unidade: "estudantes" },
@@ -211,7 +306,58 @@ export function gerarCsvImpacto(impacto: PainelImpacto): string {
     { indicador: "Lições concluídas", valor: i.aprendizado.licoesConcluidas, unidade: "lições" },
     { indicador: "Trilhas concluídas", valor: i.aprendizado.trilhasConcluidas, unidade: "trilhas" },
     { indicador: "Respostas do quiz", valor: i.aprendizado.respostasDoQuiz, unidade: "respostas" },
-    { indicador: "Acertos do quiz", valor: i.aprendizado.percentualAcertos, unidade: "%" },
+    {
+      indicador: "Acertos do quiz",
+      valor: i.aprendizado.percentualAcertos,
+      unidade: "%",
+      motivoOculto: "menos de 5 respostas",
+    },
+    ...(diag
+      ? [
+          {
+            indicador: "Estudantes com diagnóstico antes e depois",
+            valor: diag.estudantes,
+            unidade: "estudantes",
+            observacao: NOTA_DIAGNOSTICO_PAINEL,
+          },
+          {
+            indicador: "Acerto médio no diagnóstico antes",
+            valor: diag.acertoMedioAntes,
+            unidade: "%",
+            observacao: NOTA_DIAGNOSTICO_PAINEL,
+            motivoOculto: "menos de 5 respostas",
+          },
+          {
+            indicador: "Acerto médio no diagnóstico depois",
+            valor: diag.acertoMedioDepois,
+            unidade: "%",
+            observacao: NOTA_DIAGNOSTICO_PAINEL,
+            motivoOculto: "menos de 5 respostas",
+          },
+          ...diag.porTrilha.flatMap((t): IndicadorCsv[] => [
+            {
+              indicador: `Diagnóstico (${t.titulo}) — estudantes`,
+              valor: t.estudantes,
+              unidade: "estudantes",
+              observacao: NOTA_DIAGNOSTICO_PAINEL,
+            },
+            {
+              indicador: `Diagnóstico (${t.titulo}) — acerto antes`,
+              valor: t.acertoMedioAntes,
+              unidade: "%",
+              observacao: NOTA_DIAGNOSTICO_PAINEL,
+              motivoOculto: "menos de 5 respostas",
+            },
+            {
+              indicador: `Diagnóstico (${t.titulo}) — acerto depois`,
+              valor: t.acertoMedioDepois,
+              unidade: "%",
+              observacao: NOTA_DIAGNOSTICO_PAINEL,
+              motivoOculto: "menos de 5 respostas",
+            },
+          ]),
+        ]
+      : []),
     {
       indicador: "Noites de missão registradas",
       valor: i.missoes.registros,
@@ -224,18 +370,36 @@ export function gerarCsvImpacto(impacto: PainelImpacto): string {
     { indicador: "Potencial de hábitos em kWh por mês", valor: p.kwhMes, unidade: "kWh/mês", observacao: calculo },
     { indicador: "Potencial de hábitos em reais por mês", valor: p.reaisMes, unidade: "R$/mês", observacao: calculo },
     { indicador: "Estudantes no potencial de hábitos", valor: p.estudantes, unidade: "estudantes", observacao: calculo },
+    ...(energinho
+      ? [
+          {
+            indicador: "Respostas do Energinho avaliadas",
+            valor: energinho.respostasAvaliadas,
+            unidade: "respostas",
+          },
+          {
+            indicador: "Respostas do Energinho avaliadas como úteis",
+            valor: energinho.percentualUtil,
+            unidade: "%",
+            motivoOculto: "menos de 5 respostas",
+          },
+        ]
+      : []),
   ];
   return gerarCsv([
     ["indicador", "valor", "unidade", "periodo_de", "periodo_ate", "observacao"],
-    ...indicadores.map((linha) => [
-      linha.indicador,
-      linha.valor,
-      linha.unidade,
-      i.periodo.de,
-      i.periodo.ate,
-      linha.valor === null
-        ? "menos de 3 estudantes" + (linha.observacao ? `; ${linha.observacao}` : "")
-        : (linha.observacao ?? ""),
-    ]),
+    ...indicadores.map((linha) => {
+      const padraoOculto = linha.motivoOculto ?? "menos de 3 estudantes";
+      return [
+        linha.indicador,
+        linha.valor,
+        linha.unidade,
+        i.periodo.de,
+        i.periodo.ate,
+        linha.valor === null
+          ? padraoOculto + (linha.observacao ? `; ${linha.observacao}` : "")
+          : (linha.observacao ?? ""),
+      ];
+    }),
   ]);
 }

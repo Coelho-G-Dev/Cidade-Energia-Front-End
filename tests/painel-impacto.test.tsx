@@ -164,13 +164,30 @@ describe("TelaImpacto", () => {
     const impactoOculto: PainelImpacto = {
       ...IMPACTO_SIMULADO,
       estudantes: { comPerfil: null, ativosNoPeriodo: null, verificadosPorTurma: null },
-      aprendizado: { licoesConcluidas: null, trilhasConcluidas: null, respostasDoQuiz: null, percentualAcertos: null },
+      aprendizado: {
+        licoesConcluidas: null,
+        trilhasConcluidas: null,
+        respostasDoQuiz: null,
+        percentualAcertos: null,
+        diagnostico: {
+          estudantes: null,
+          acertoMedioAntes: null,
+          acertoMedioDepois: null,
+          porTrilha: IMPACTO_SIMULADO.aprendizado.diagnostico.porTrilha.map((t) => ({
+            ...t,
+            estudantes: null,
+            acertoMedioAntes: null,
+            acertoMedioDepois: null,
+          })),
+        },
+      },
       missoes: { registros: null, concluidas: null },
       simulacoes: { salvas: null, estudantesQueSimularam: null },
       economiaEstimada: {
         ...IMPACTO_SIMULADO.economiaEstimada,
         potencialHabitos: { kwhMes: null, reaisMes: null, estudantes: null },
       },
+      energinho: { respostasAvaliadas: null, percentualUtil: null },
     };
     api.obterImpacto.mockResolvedValue(impactoOculto);
     render(<TelaImpacto />);
@@ -179,7 +196,7 @@ describe("TelaImpacto", () => {
     await userEvent.click(screen.getByRole("button", { name: "Consultar impacto" }));
 
     expect(await screen.findByRole("heading", { name: /Potencial de economia com hábitos \(estimativa\)/i })).toBeInTheDocument();
-    expect(screen.getByText("menos de 5 respostas")).toBeInTheDocument();
+    expect(screen.getAllByText("menos de 5 respostas").length).toBeGreaterThanOrEqual(3);
     expect(screen.getAllByText("menos de 3 estudantes").length).toBeGreaterThanOrEqual(8);
   });
 
@@ -213,6 +230,17 @@ describe("TelaImpacto", () => {
       expect(screen.queryByText(/D-001/i)).not.toBeInTheDocument();
       expect(screen.getByText("23/10 a 20/11")).toBeInTheDocument();
       expect(screen.getByText(/Grupos com menos de 3 estudantes ficam ocultos/i)).toBeInTheDocument();
+
+      // T-033b / T-035b: Diagnóstico antes e depois e avaliação do Energinho no painel de impacto
+      expect(screen.getByRole("heading", { name: "Diagnóstico antes e depois" })).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Compara os mesmos estudantes antes e depois da trilha. Não há grupo de comparação, então não mede só o efeito do app.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getAllByText("48% antes → 80% depois").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Respostas do Energinho avaliadas como úteis")).toBeInTheDocument();
+      expect(screen.getByText("82,1%")).toBeInTheDocument();
 
       // Botão Salvar em PDF chama window.print()
       await userEvent.click(screen.getByRole("button", { name: "Salvar em PDF" }));

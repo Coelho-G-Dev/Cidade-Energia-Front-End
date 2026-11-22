@@ -16,6 +16,8 @@ import type { PainelProfessor } from "@/types";
 
 export const TEXTO_MENOS_DE_3 = "menos de 3 estudantes";
 export const TEXTO_MENOS_DE_5_RESPOSTAS = "menos de 5 respostas";
+export const NOTA_COMPARACAO_DIAGNOSTICO =
+  "Compara os mesmos estudantes antes e depois da trilha. Não há grupo de comparação, então não mede só o efeito do app.";
 
 export const normalizarCodigoProfessor = (codigo: string): string =>
   codigo.replace(/[\s-]/g, "").toUpperCase();
@@ -28,6 +30,11 @@ export function valorOuOculto(valor: number | null, formatar: (n: number) => str
 export function percentualOuOculto(valor: number | null): string {
   if (valor === null) return TEXTO_MENOS_DE_5_RESPOSTAS;
   return `${numero(valor, 1)}%`;
+}
+
+export function formatarAntesDepois(antes: number | null, depois: number | null): string {
+  if (antes === null || depois === null) return TEXTO_MENOS_DE_5_RESPOSTAS;
+  return `${numero(antes, 1)}% antes → ${numero(depois, 1)}% depois`;
 }
 
 function mensagemErroProfessor(erro: unknown): string {
@@ -342,6 +349,39 @@ export function TelaProfessor() {
                       ))}
                     </ul>
                   )}
+                </Card>
+              )}
+
+              {painel.diagnostico && (
+                <Card className="flex flex-col gap-4 p-4">
+                  <div className="flex flex-col gap-0.5">
+                    <h3 className="text-titulo-3">Diagnóstico antes e depois</h3>
+                    <p className="text-pequeno text-apoio">{NOTA_COMPARACAO_DIAGNOSTICO}</p>
+                  </div>
+                  <ul className="flex flex-col gap-3">
+                    {painel.diagnostico.map((item) => (
+                      <li
+                        key={item.slug}
+                        className="flex flex-col gap-1.5 rounded-pequeno border-2 border-trilho bg-fundo p-3.5"
+                      >
+                        <span className="font-bold">{item.titulo}</span>
+                        <div className="grid grid-cols-1 gap-2 text-pequeno sm:grid-cols-2">
+                          <div>
+                            <span className="text-apoio">Estudantes (antes e depois): </span>
+                            <strong className="text-tinta">
+                              {valorOuOculto(item.estudantes, (n) => `${numero(n, 0)} estudantes`)}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="text-apoio">Acertos no diagnóstico: </span>
+                            <strong className="text-tinta">
+                              {formatarAntesDepois(item.acertoMedioAntes, item.acertoMedioDepois)}
+                            </strong>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </Card>
               )}
 

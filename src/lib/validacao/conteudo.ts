@@ -27,3 +27,21 @@ export const rankingSchema = z.object({
 export const mapaSchema = z.object({
   tipo: z.enum(["solar", "coleta", "acao"], "Use tipo=solar, coleta ou acao.").optional(),
 });
+
+export const momentoDiagnosticoSchema = z.enum(["antes", "depois"], "Use momento=antes ou momento=depois.");
+
+export const enviarDiagnosticoSchema = z
+  .object({
+    momento: momentoDiagnosticoSchema,
+    respostas: z
+      .array(
+        z
+          .object({
+            perguntaId: z.uuid("Pergunta inválida."),
+            opcao: z.number().int("Use o índice da opção (0, 1, 2...).").min(0).max(4),
+          })
+          .strict(),
+      )
+      .min(1, "Responda todas as perguntas do diagnóstico."),
+  })
+  .strict();

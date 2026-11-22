@@ -28,3 +28,15 @@ export const tutorSchema = z
       .default([]),
   })
   .strict();
+
+export const avaliarTutorSchema = z
+  .object({
+    respostaId: z.string("Informe o identificador da resposta.").trim().min(1, "Informe o identificador da resposta."),
+    util: z.boolean("Informe se a resposta ajudou."),
+    motivo: z.enum(["errada", "confusa", "fora_do_tema"], "Motivo inválido.").optional(),
+  })
+  .strict()
+  .refine((d) => d.motivo === undefined || d.util === false, {
+    message: "O motivo só pode ser enviado quando util for false.",
+    path: ["motivo"],
+  });

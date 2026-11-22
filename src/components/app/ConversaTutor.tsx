@@ -7,17 +7,110 @@ import { BotaoIcone } from "@/components/ui/Botao";
 import { MensagemErro } from "@/components/ui/Campo";
 import { Icone } from "@/components/ui/Icone";
 import { IndicadorDigitando } from "@/components/ui/IndicadorDigitando";
-import { api, mensagemParaPessoa } from "@/lib/api";
+import { api, ErroApi, mensagemParaPessoa } from "@/lib/api";
 import { juntar } from "@/lib/classes";
 import { CURVA, DURACAO, usePoucoMovimento } from "@/lib/movimento";
 import { TUTOR_HISTORICO_MAXIMO, TUTOR_MENSAGEM_MAXIMA } from "@/lib/validacao/tutor";
-import type { LicaoRelacionada, MensagemTutor } from "@/types";
+import type { LicaoRelacionada, MensagemTutor, MotivoAvaliacaoTutor } from "@/types";
 
-type Mensagem = MensagemTutor & { id: number; licoes?: LicaoRelacionada[] };
+type Mensagem = MensagemTutor & { id: number; licoes?: LicaoRelacionada[]; respostaId?: string };
 
 export const SUGESTOES = ["Como economizar no ar-condicionado?", "O que é kWh?", "Vale a pena ter placa solar em São Luís?"];
 
+export const MOTIVOS_AVALIACAO_TUTOR: readonly { valor: MotivoAvaliacaoTutor; rotulo: string }[] = [
+  { valor: "errada", rotulo: "Resposta errada" },
+  { valor: "confusa", rotulo: "Confusa" },
+  { valor: "fora_do_tema", rotulo: "Fora do assunto" },
+];
+
 const SAUDACAO = "Oi! Pode perguntar o que quiser sobre a sua conta de luz ou sobre energia solar.";
+
+function AvaliacaoResposta({ respostaId }: { respostaId: string }) {
+  const [etapa, setEtapa] = useState<"botoes" | "motivos" | "enviado">("botoes");
+  const [enviando, setEnviando] = useState(false);
+  const [erroVoto, setErroVoto] = useState<string | null>(null);
+
+  async function enviarVoto(util: boolean, motivo?: MotivoAvaliacaoTutor) {
+    if (enviando) return;
+    setEnviando(true);
+    setErroVoto(null);
+    try {
+      await api.avaliarTutor(motivo ? { respostaId, util, motivo } : { respostaId, util });
+      setEtapa("enviado");
+    } catch (e) {
+      if (e instanceof ErroApi && e.codigo === "AVALIACAO_JA_REGISTRADA") {
+        setEtapa("enviado");
+      } else {
+        setErroVoto(mensagemParaPessoa(e));
+      }
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  if (etapa === "enviado") {
+    return (
+      <p role="status" className="mt-2 border-t border-trilho pt-2 text-pequeno font-bold text-sucesso">
+        Obrigado!
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-1.5 border-t border-trilho pt-2">
+      {etapa === "botoes" ? (
+        <div role="group" aria-label="A resposta ajudou?" className="flex flex-wrap items-center gap-2">
+          <span className="text-pequeno font-semibold text-apoio">Ajudou?</span>
+          <button
+            type="button"
+            disabled={enviando}
+            onClick={() => void enviarVoto(true)}
+            className="afundar-leve inline-flex min-h-11 items-center justify-center rounded-pequeno border-2 border-tinta bg-superficie px-3 text-pequeno font-bold text-tinta"
+          >
+            Sim
+          </button>
+          <button
+            type="button"
+            disabled={enviando}
+            onClick={() => {
+              setErroVoto(null);
+              setEtapa("motivos");
+            }}
+            className="afundar-leve inline-flex min-h-11 items-center justify-center rounded-pequeno border-2 border-tinta bg-superficie px-3 text-pequeno font-bold text-tinta"
+          >
+            Não
+          </button>
+        </div>
+      ) : (
+        <div role="group" aria-label="Motivo pelo qual a resposta não ajudou" className="flex flex-col gap-1.5">
+          <span className="text-pequeno font-semibold text-apoio">O que houve? (opcional)</span>
+          <div className="flex flex-wrap gap-2">
+            {MOTIVOS_AVALIACAO_TUTOR.map((m) => (
+              <button
+                key={m.valor}
+                type="button"
+                disabled={enviando}
+                onClick={() => void enviarVoto(false, m.valor)}
+                className="afundar-leve inline-flex min-h-11 items-center justify-center rounded-pequeno border-2 border-tinta bg-superficie px-3 text-pequeno font-bold text-tinta"
+              >
+                {m.rotulo}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={enviando}
+              onClick={() => void enviarVoto(false)}
+              className="afundar-leve inline-flex min-h-11 items-center justify-center rounded-pequeno border-2 border-primaria bg-primaria-suave px-3 text-pequeno font-bold text-primaria"
+            >
+              Enviar sem motivo
+            </button>
+          </div>
+        </div>
+      )}
+      {erroVoto && <span className="text-pequeno font-semibold text-erro">{erroVoto}</span>}
+    </div>
+  );
+}
 
 function Balao({ papel, children }: { papel: MensagemTutor["papel"]; children: React.ReactNode }) {
   const poucoMovimento = usePoucoMovimento();
@@ -58,8 +151,8 @@ export function ConversaTutor({ lateral = false }: Props) {
     if (mensagens.length === 0 && !esperando) return;
     const comportamento = poucoMovimento ? "auto" : "smooth";
     // Ao lado da lição só a conversa rola; a página fica onde a pessoa está lendo.
-    if (lateral) rolagem.current?.scrollTo({ top: rolagem.current.scrollHeight, behavior: comportamento });
-    else fim.current?.scrollIntoView({ behavior: comportamento, block: "end" });
+    if (lateral) rolagem.current?.scrollTo?.({ top: rolagem.current.scrollHeight, behavior: comportamento });
+    else fim.current?.scrollIntoView?.({ behavior: comportamento, block: "end" });
   }, [mensagens, esperando, poucoMovimento, lateral]);
 
   async function perguntar(pergunta: string) {
@@ -77,7 +170,16 @@ export function ConversaTutor({ lateral = false }: Props) {
       const resposta = await api.perguntarAoTutor({ mensagem, historico });
       sequencia.current += 1;
       const idResposta = sequencia.current;
-      setMensagens((m) => [...m, { id: idResposta, papel: "energinho", texto: resposta.resposta, licoes: resposta.licoesRelacionadas }]);
+      setMensagens((m) => [
+        ...m,
+        {
+          id: idResposta,
+          papel: "energinho",
+          texto: resposta.resposta,
+          licoes: resposta.licoesRelacionadas,
+          respostaId: resposta.respostaId,
+        },
+      ]);
     } catch (e) {
       // Devolve a pergunta para o campo, para a pessoa tentar de novo sem digitar tudo.
       setMensagens((m) => m.filter((x) => x.id !== id));
@@ -143,6 +245,7 @@ export function ConversaTutor({ lateral = false }: Props) {
                     ))}
                   </span>
                 )}
+                {m.papel === "energinho" && m.respostaId && <AvaliacaoResposta respostaId={m.respostaId} />}
               </Balao>
             ))}
           </AnimatePresence>

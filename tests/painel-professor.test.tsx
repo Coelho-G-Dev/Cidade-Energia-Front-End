@@ -11,7 +11,13 @@ import {
   PAINEL_PROFESSOR_OCULTO_SIMULADO,
   PAINEL_PROFESSOR_SIMULADO,
 } from "@/lib/api/simulado";
-import { percentualOuOculto, TelaProfessor, valorOuOculto } from "@/telas/TelaProfessor";
+import {
+  formatarAntesDepois,
+  NOTA_COMPARACAO_DIAGNOSTICO,
+  percentualOuOculto,
+  TelaProfessor,
+  valorOuOculto,
+} from "@/telas/TelaProfessor";
 
 const api = vi.hoisted(() => ({
   obterPainelProfessor: vi.fn(),
@@ -105,6 +111,9 @@ describe("TelaProfessor", () => {
     expect(valorOuOculto(12, (n) => `${n} estudantes`)).toBe("12 estudantes");
     expect(percentualOuOculto(null)).toBe("menos de 5 respostas");
     expect(percentualOuOculto(71.4)).toBe("71,4%");
+    expect(formatarAntesDepois(48, 80)).toBe("48% antes → 80% depois");
+    expect(formatarAntesDepois(null, 80)).toBe("menos de 5 respostas");
+    expect(formatarAntesDepois(48, null)).toBe("menos de 5 respostas");
   });
 
   it("mostra estado carregando enquanto aguarda a API", async () => {
@@ -171,7 +180,12 @@ describe("TelaProfessor", () => {
     expect(screen.getByText("71,4%")).toBeInTheDocument();
     expect(screen.getByText("Para que serve o inversor em um sistema solar de casa?")).toBeInTheDocument();
     expect(screen.getByText("Ar desligado antes de dormir")).toBeInTheDocument();
-    // Recortes com null (trilha 5 e missão 2) aparecem como "menos de 3 estudantes"
+    // Bloco Diagnóstico antes e depois (T-033b) com formato "48% antes → 80% depois" e nota fixa
+    expect(screen.getByRole("heading", { name: "Diagnóstico antes e depois" })).toBeInTheDocument();
+    expect(screen.getByText(NOTA_COMPARACAO_DIAGNOSTICO)).toBeInTheDocument();
+    expect(screen.getByText("48% antes → 80% depois")).toBeInTheDocument();
+    // Recortes com 4 pares (menos de 5 respostas) e menos de 3 estudantes
+    expect(screen.getAllByText("menos de 5 respostas").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("menos de 3 estudantes").length).toBeGreaterThanOrEqual(2);
 
     // D-003: código nunca vai para localStorage, sessionStorage ou URL
@@ -198,7 +212,7 @@ describe("TelaProfessor", () => {
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Média de/)).not.toBeInTheDocument();
     expect(screen.queryByText(/respostas na 1ª tentativa/)).not.toBeInTheDocument();
-    expect(screen.getByText("menos de 5 respostas")).toBeInTheDocument();
+    expect(screen.getAllByText("menos de 5 respostas").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("menos de 3 estudantes").length).toBeGreaterThanOrEqual(3);
   });
 });

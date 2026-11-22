@@ -33,6 +33,10 @@ const MENSAGENS: Partial<Record<CodigoErroFront, string>> = {
   METODO_NAO_PERMITIDO: "Algo deu errado do nosso lado. Tente de novo.",
   ESCOLA_NAO_ENCONTRADA: "Não encontramos uma escola com esse código. Confira o código do professor.",
   IMPACTO_DESLIGADO: "O painel de impacto não está configurado neste ambiente.",
+  DIAGNOSTICO_INDISPONIVEL: "Este diagnóstico não está disponível agora.",
+  DIAGNOSTICO_JA_RESPONDIDO: "Você já respondeu este diagnóstico.",
+  RESPOSTA_NAO_ENCONTRADA: "Não encontramos essa resposta para avaliar.",
+  AVALIACAO_JA_REGISTRADA: "Você já avaliou esta resposta.",
 };
 
 const USAR_MENSAGEM_DO_SERVIDOR = new Set<string>([
@@ -40,6 +44,10 @@ const USAR_MENSAGEM_DO_SERVIDOR = new Set<string>([
   "TURMA_NAO_ENCONTRADA",
   "ESCOLA_NAO_ENCONTRADA",
   "IMPACTO_DESLIGADO",
+  "DIAGNOSTICO_INDISPONIVEL",
+  "DIAGNOSTICO_JA_RESPONDIDO",
+  "RESPOSTA_NAO_ENCONTRADA",
+  "AVALIACAO_JA_REGISTRADA",
   "BAIRRO_OU_ESCOLA_NAO_ENCONTRADO",
   "LIMITE_DE_TROCAS",
   "LIMITE_TUTOR",

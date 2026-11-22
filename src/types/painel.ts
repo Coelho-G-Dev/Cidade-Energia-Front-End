@@ -1,4 +1,4 @@
-// Contratos D-004 (GET /api/professor/escola) e D-005 + D-011 (GET /api/impacto).
+// Contratos D-004 (GET /api/professor/escola), D-005 + D-011 (GET /api/impacto), D-012 e D-013 (seções 2 e 3b).
 
 export type EscolaPainelProfessor = {
   nome: string;
@@ -34,6 +34,14 @@ export type QuizPainelProfessor = {
   perguntasMaisErradas: PerguntaErradaPainelProfessor[];
 };
 
+export type DiagnosticoTrilhaPainel = {
+  slug: string;
+  titulo: string;
+  estudantes: number | null;
+  acertoMedioAntes: number | null;
+  acertoMedioDepois: number | null;
+};
+
 export type MissaoPainelProfessor = {
   slug: string;
   titulo: string;
@@ -52,6 +60,7 @@ export type PainelProfessor = {
   oculto: boolean;
   progresso: ProgressoPainelProfessor | null;
   quiz: QuizPainelProfessor | null;
+  diagnostico: DiagnosticoTrilhaPainel[] | null;
   missoes: MissaoPainelProfessor[] | null;
   simulacoes: SimulacoesPainelProfessor | null;
   atualizadoEm: string;
@@ -61,6 +70,18 @@ export type PainelProfessor = {
 export type FiltroPeriodoImpacto = {
   de?: string;
   ate?: string;
+};
+
+export type DiagnosticoImpacto = {
+  estudantes: number | null;
+  acertoMedioAntes: number | null;
+  acertoMedioDepois: number | null;
+  porTrilha: DiagnosticoTrilhaPainel[];
+};
+
+export type EnerginhoImpacto = {
+  respostasAvaliadas: number | null;
+  percentualUtil: number | null;
 };
 
 export type PainelImpacto = {
@@ -82,6 +103,7 @@ export type PainelImpacto = {
     trilhasConcluidas: number | null;
     respostasDoQuiz: number | null;
     percentualAcertos: number | null;
+    diagnostico: DiagnosticoImpacto;
   };
   missoes: {
     registros: number | null;
@@ -101,6 +123,7 @@ export type PainelImpacto = {
       potencialHabitos: string;
     };
   };
+  energinho: EnerginhoImpacto;
   estimativa: true;
   atualizadoEm: string;
 };

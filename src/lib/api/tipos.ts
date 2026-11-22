@@ -3,14 +3,18 @@ import type {
   AtualizarPerfil,
   Bairro,
   CriarSimulacao,
+  Diagnostico,
   Escola,
   FiltroPeriodoImpacto,
   ItemRanking,
   LicaoConcluida,
   LicaoDetalhada,
   Missao,
+  MomentoDiagnostico,
   PainelImpacto,
   PainelProfessor,
+  PedidoAvaliacaoTutor,
+  PedidoDiagnostico,
   PedidoResposta,
   PedidoTutor,
   Perfil,
@@ -20,6 +24,8 @@ import type {
   RespostaDoQuiz,
   RespostaSimulacao,
   RespostaTutor,
+  ResultadoAvaliacaoTutor,
+  ResultadoDiagnostico,
   ResumoPerfil,
   ResumoTrilha,
   SimulacaoSalva,
@@ -56,4 +62,7 @@ export type ClienteApi = {
   obterPainelProfessor(codigoProfessor: string): Promise<PainelProfessor>;
   obterImpacto(chaveImpacto: string, periodo?: FiltroPeriodoImpacto): Promise<PainelImpacto>;
   exportarImpactoCsv(chaveImpacto: string, periodo?: FiltroPeriodoImpacto): Promise<string>;
+  obterDiagnostico(slug: string, momento: MomentoDiagnostico): Promise<Diagnostico>;
+  enviarDiagnostico(slug: string, dados: PedidoDiagnostico): Promise<ResultadoDiagnostico>;
+  avaliarTutor(dados: PedidoAvaliacaoTutor): Promise<ResultadoAvaliacaoTutor>;
 };

@@ -59,5 +59,21 @@ export function criarClienteReal(requisitar: Requisitar): ClienteApi {
         formato: "texto",
         cabecalhos: { "X-Chave-Impacto": chaveImpacto },
       }),
+    obterDiagnostico: (slug, momento) =>
+      requisitar(`/api/trilhas/${id(slug)}/diagnostico?momento=${id(momento)}`, {
+        autenticacao: "exigida",
+      }),
+    enviarDiagnostico: (slug, dados) =>
+      requisitar(`/api/trilhas/${id(slug)}/diagnostico`, {
+        metodo: "POST",
+        corpo: dados,
+        autenticacao: "exigida",
+      }),
+    avaliarTutor: (dados) =>
+      requisitar("/api/tutor/avaliar", {
+        metodo: "POST",
+        corpo: dados,
+        autenticacao: "exigida",
+      }),
   };
 }
