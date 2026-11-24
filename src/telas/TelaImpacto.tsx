@@ -55,14 +55,18 @@ function ItemIndicador({
   rotulo,
   valor,
   complemento,
+  className,
 }: {
   rotulo: string;
   valor: string;
   complemento?: string;
+  className?: string;
 }) {
   const oculto = valor === TEXTO_MENOS_DE_3 || valor === TEXTO_MENOS_DE_5_RESPOSTAS;
   return (
-    <div className="flex flex-col gap-0.5 rounded-pequeno border-2 border-tinta bg-superficie p-3">
+    <div
+      className={`cartao-impressao flex flex-col gap-0.5 rounded-pequeno border-2 border-tinta bg-superficie p-3${className ? ` ${className}` : ""}`}
+    >
       <span className="text-pequeno text-apoio">{rotulo}</span>
       <strong className={oculto ? "text-sm font-bold text-apoio" : "font-titulo text-titulo-2 font-extrabold tabular-nums"}>
         {valor}
@@ -167,7 +171,7 @@ export function TelaImpacto() {
           <Chip tom="destaque">Piloto Cidade Energia · São Luís (MA)</Chip>
           <Chip tom="neutro">Estimativa · Só dados agregados</Chip>
         </div>
-        <h1 className="text-titulo-1">Painel de impacto do piloto</h1>
+        <h1 className="titulo-bloco-impressao text-titulo-1">Painel de impacto do piloto</h1>
         <p className="text-apoio">
           Indicadores agregados de estudantes, escolas, bairros, trilhas, missões e estimativa de potencial de economia com hábitos.
         </p>
@@ -247,8 +251,8 @@ export function TelaImpacto() {
       )}
 
       {!carregando && impacto && (
-        <div className="flex flex-col gap-4">
-          <Card tom="primaria" sombra={false} className="flex flex-wrap items-center justify-between gap-2 p-3.5">
+        <div className="resultados-impacto-impressao flex flex-col gap-4">
+          <Card tom="primaria" sombra={false} className="bloco-impressao flex flex-wrap items-center justify-between gap-2 p-3.5">
             <div className="flex flex-col">
               <span className="text-pequeno font-semibold text-primaria">Período consultado (fuso de São Luís)</span>
               <strong className="text-base">{formatarPeriodoImpacto(impacto.periodo.de, impacto.periodo.ate)}</strong>
@@ -258,17 +262,17 @@ export function TelaImpacto() {
             </span>
           </Card>
 
-          <Card tom="sucesso" className="flex flex-col gap-3 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-titulo-2">Potencial de economia com hábitos (estimativa)</h2>
+          <Card tom="sucesso" className="bloco-impressao flex flex-col gap-3 p-4">
+            <div className="titulo-bloco-impressao flex flex-wrap items-center justify-between gap-2">
+              <h2 className="titulo-bloco-impressao text-titulo-2">Potencial de economia com hábitos (estimativa)</h2>
               <Chip tom="sucesso">Estimativa</Chip>
             </div>
-            <p className="text-sm font-semibold">
+            <p className="titulo-bloco-impressao text-sm font-semibold">
               É o que as famílias <strong>poderiam</strong> economizar por mês seguindo as dicas do simulador;{" "}
               <strong>não é economia medida</strong> na conta de luz.
             </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="flex flex-col gap-0.5 rounded-pequeno border-2 border-tinta bg-superficie p-3">
+            <div className="grade-impressao-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="cartao-impressao flex flex-col gap-0.5 rounded-pequeno border-2 border-tinta bg-superficie p-3">
                 <span className="text-pequeno text-apoio">Economia mensal em reais (estimativa)</span>
                 <strong className="font-titulo text-titulo-2 font-extrabold tabular-nums text-sucesso">
                   {valorOuOculto(impacto.economiaEstimada.potencialHabitos.reaisMes, (n) => `${brl(n)} / mês`)}
@@ -277,7 +281,7 @@ export function TelaImpacto() {
                   Estimativa — como calculamos: {impacto.economiaEstimada.comoCalculamos.potencialHabitos}
                 </span>
               </div>
-              <div className="flex flex-col gap-0.5 rounded-pequeno border-2 border-tinta bg-superficie p-3">
+              <div className="cartao-impressao flex flex-col gap-0.5 rounded-pequeno border-2 border-tinta bg-superficie p-3">
                 <span className="text-pequeno text-apoio">Energia economizada por mês (estimativa)</span>
                 <strong className="font-titulo text-titulo-2 font-extrabold tabular-nums text-sucesso">
                   {valorOuOculto(impacto.economiaEstimada.potencialHabitos.kwhMes, (n) => `${numero(n, 1)} kWh / mês`)}
@@ -286,7 +290,7 @@ export function TelaImpacto() {
                   Estimativa — como calculamos: {impacto.economiaEstimada.comoCalculamos.potencialHabitos}
                 </span>
               </div>
-              <div className="flex flex-col gap-0.5 rounded-pequeno border-2 border-tinta bg-superficie p-3">
+              <div className="cartao-impressao flex flex-col gap-0.5 rounded-pequeno border-2 border-tinta bg-superficie p-3">
                 <span className="text-pequeno text-apoio">Estudantes na estimativa de hábitos</span>
                 <strong className="font-titulo text-titulo-2 font-extrabold tabular-nums">
                   {valorOuOculto(impacto.economiaEstimada.potencialHabitos.estudantes, (n) => numero(n, 0))}
@@ -296,10 +300,10 @@ export function TelaImpacto() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card className="flex flex-col gap-3 p-4">
-              <h2 className="text-titulo-3">Alcance: estudantes, escolas e bairros</h2>
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          <div className="grade-impressao-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card className="bloco-impressao flex flex-col gap-3 p-4">
+              <h2 className="titulo-bloco-impressao text-titulo-3">Alcance: estudantes, escolas e bairros</h2>
+              <div className="grade-impressao-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 <ItemIndicador
                   rotulo="Estudantes com perfil"
                   valor={valorOuOculto(impacto.estudantes.comPerfil, (n) => numero(n, 0))}
@@ -327,9 +331,9 @@ export function TelaImpacto() {
               </div>
             </Card>
 
-            <Card className="flex flex-col gap-3 p-4">
-              <h2 className="text-titulo-3">Aprendizado, missões e simulações</h2>
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            <Card className="bloco-impressao flex flex-col gap-3 p-4">
+              <h2 className="titulo-bloco-impressao text-titulo-3">Aprendizado, missões e simulações</h2>
+              <div className="grade-impressao-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 <ItemIndicador
                   rotulo="Lições concluídas"
                   valor={valorOuOculto(impacto.aprendizado.licoesConcluidas, (n) => numero(n, 0))}
@@ -367,6 +371,7 @@ export function TelaImpacto() {
                 />
                 {impacto.energinho && (
                   <ItemIndicador
+                    className="cartao-impressao-largo"
                     rotulo="Respostas do Energinho avaliadas como úteis"
                     valor={percentualOuOculto(impacto.energinho.percentualUtil)}
                     complemento={
@@ -381,12 +386,12 @@ export function TelaImpacto() {
           </div>
 
           {impacto.aprendizado.diagnostico && (
-            <Card className="flex flex-col gap-3 p-4">
-              <div className="flex flex-col gap-0.5">
-                <h2 className="text-titulo-3">Diagnóstico antes e depois</h2>
+            <Card className="bloco-impressao flex flex-col gap-3 p-4">
+              <div className="titulo-bloco-impressao flex flex-col gap-0.5">
+                <h2 className="titulo-bloco-impressao text-titulo-3">Diagnóstico antes e depois</h2>
                 <p className="text-pequeno text-apoio">{NOTA_COMPARACAO_DIAGNOSTICO}</p>
               </div>
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="grade-impressao-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <ItemIndicador
                   rotulo="Acertos no diagnóstico"
                   valor={formatarAntesDepois(
@@ -400,11 +405,11 @@ export function TelaImpacto() {
                 />
               </div>
               {impacto.aprendizado.diagnostico.porTrilha.length > 0 && (
-                <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                <ul className="grade-impressao-2 grid grid-cols-1 gap-2.5 md:grid-cols-2">
                   {impacto.aprendizado.diagnostico.porTrilha.map((trilha) => (
                     <li
                       key={trilha.slug}
-                      className="flex flex-col gap-1 rounded-pequeno border-2 border-tinta bg-superficie p-3"
+                      className="cartao-impressao flex flex-col gap-1 rounded-pequeno border-2 border-tinta bg-superficie p-3"
                     >
                       <span className="text-sm font-bold">{trilha.titulo}</span>
                       <div className="flex flex-wrap items-center justify-between gap-2 text-pequeno">

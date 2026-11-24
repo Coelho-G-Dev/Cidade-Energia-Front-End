@@ -186,20 +186,38 @@
   color: var(--color-primaria);
 }
 
-/* Impressão A4 em uma página, legível em preto e branco, para o relatório do painel de impacto (D-006 / T-027). */
+/* Impressão A4 em uma página, legível em preto e branco, para o relatório do painel de impacto (D-006 / T-027 / T-033c). */
 @page {
   size: A4 portrait;
-  margin: 10mm 12mm;
+  margin: 7mm 9mm;
 }
 
 @media print {
+  :root,
+  .painel-impacto-impressao {
+    --text-titulo-1: 13.5pt;
+    --text-titulo-1--line-height: 1.15;
+    --text-titulo-2: 10.5pt;
+    --text-titulo-2--line-height: 1.2;
+    --text-titulo-3: 10pt;
+    --text-titulo-3--line-height: 1.2;
+    --text-numero: 10.5pt;
+    --text-numero--line-height: 1.2;
+    --text-corpo: 9.5pt;
+    --text-corpo--line-height: 1.25;
+    --text-pequeno: 9pt;
+    --text-pequeno--line-height: 1.25;
+    --text-mini: 9pt;
+    --text-mini--line-height: 1.2;
+  }
+
   html,
   body {
     min-height: auto !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 10pt !important;
-    line-height: 1.35 !important;
+    font-size: 9.5pt !important;
+    line-height: 1.25 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -210,8 +228,9 @@
 
   .painel-impacto-impressao {
     max-width: 100% !important;
+    min-height: auto !important;
     padding: 0 !important;
-    gap: 8pt !important;
+    gap: 5pt !important;
   }
 
   .painel-impacto-impressao * {
@@ -221,9 +240,72 @@
     background-color: #ffffff !important;
   }
 
+  .painel-impacto-impressao h1 {
+    font-size: 13.5pt !important;
+    line-height: 1.15 !important;
+  }
+
+  .painel-impacto-impressao h2 {
+    font-size: 10.5pt !important;
+    line-height: 1.2 !important;
+  }
+
+  .painel-impacto-impressao h3 {
+    font-size: 10pt !important;
+    line-height: 1.2 !important;
+  }
+
+  .painel-impacto-impressao h1,
+  .painel-impacto-impressao h2,
+  .painel-impacto-impressao h3,
+  .painel-impacto-impressao .titulo-bloco-impressao {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  .painel-impacto-impressao header,
   .painel-impacto-impressao section,
-  .painel-impacto-impressao article {
-    break-inside: avoid;
-    page-break-inside: avoid;
+  .painel-impacto-impressao article,
+  .painel-impacto-impressao li,
+  .painel-impacto-impressao .rounded-cartao,
+  .painel-impacto-impressao .rounded-pequeno,
+  .painel-impacto-impressao .bloco-impressao,
+  .painel-impacto-impressao .cartao-impressao {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .painel-impacto-impressao header {
+    gap: 2pt !important;
+  }
+
+  .painel-impacto-impressao .resultados-impacto-impressao {
+    gap: 5pt !important;
+  }
+
+  .painel-impacto-impressao .bloco-impressao {
+    padding: 5pt 7pt !important;
+    gap: 4pt !important;
+  }
+
+  .painel-impacto-impressao .cartao-impressao {
+    padding: 3.5pt 5.5pt !important;
+    gap: 1.5pt !important;
+  }
+
+  .painel-impacto-impressao .cartao-impressao-largo {
+    grid-column: 1 / -1 !important;
+  }
+
+  .painel-impacto-impressao .grade-impressao-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 4.5pt !important;
+  }
+
+  .painel-impacto-impressao .grade-impressao-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4pt !important;
   }
 }

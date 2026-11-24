@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -264,5 +266,51 @@ describe("TelaImpacto", () => {
       revokeObjectUrlSpy.mockRestore();
       clickAnchorSpy.mockRestore();
     }
+  });
+
+  it("aplica classes de impressão A4 (T-033c) nos blocos, cartões, títulos e grades lado a lado sem cortar cartões", async () => {
+    api.obterImpacto.mockResolvedValue(IMPACTO_SIMULADO);
+    const { container } = render(<TelaImpacto />);
+
+    await userEvent.type(screen.getByLabelText("Chave de impacto"), CHAVE_IMPACTO_SIMULADA);
+    await userEvent.click(screen.getByRole("button", { name: "Consultar impacto" }));
+
+    expect(await screen.findByRole("heading", { name: /Potencial de economia com hábitos \(estimativa\)/i })).toBeInTheDocument();
+
+    // Todos os 5 blocos de resultados têm bloco-impressao (período, potencial de economia, alcance, aprendizado e diagnóstico)
+    const blocosImpressao = container.querySelectorAll(".bloco-impressao");
+    expect(blocosImpressao).toHaveLength(5);
+
+    // Todos os cartões internos (3 economia + 6 alcance + 7 aprendizado/Energinho + 2 diagnóstico geral + 5 trilhas = 23) têm cartao-impressao
+    const cartoesImpressao = container.querySelectorAll(".cartao-impressao");
+    expect(cartoesImpressao).toHaveLength(23);
+
+    // O cartão "Respostas do Energinho avaliadas como úteis" tem cartao-impressao e cartao-impressao-largo
+    const cartaoEnerginho = screen.getByText("Respostas do Energinho avaliadas como úteis").closest(".cartao-impressao");
+    expect(cartaoEnerginho).not.toBeNull();
+    expect(cartaoEnerginho).toHaveClass("cartao-impressao", "cartao-impressao-largo");
+
+    // Todos os títulos de bloco (h1 e h2) têm titulo-bloco-impressao para manter o título junto do conteúdo
+    const titulos = container.querySelectorAll("h1, h2");
+    expect(titulos.length).toBeGreaterThanOrEqual(5);
+    for (const titulo of titulos) {
+      expect(titulo).toHaveClass("titulo-bloco-impressao");
+    }
+
+    // Grades lado a lado na impressão: 3 grades de 2 colunas (alcance+aprendizado, resumo diagnóstico, lista de 5 trilhas) e 3 grades de 3 colunas
+    expect(container.querySelectorAll(".grade-impressao-2")).toHaveLength(3);
+    expect(container.querySelectorAll(".grade-impressao-3")).toHaveLength(3);
+
+    // Verifica que globals.css define @media print com break-inside: avoid nos cartões/blocos, break-after: avoid nos títulos e fonte >= 9pt
+    const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf-8");
+    expect(css).toContain("@media print");
+    expect(css).toContain(".painel-impacto-impressao .cartao-impressao");
+    expect(css).toContain(".painel-impacto-impressao .bloco-impressao");
+    expect(css).toContain("break-inside: avoid !important;");
+    expect(css).toContain("page-break-inside: avoid !important;");
+    expect(css).toContain("break-after: avoid !important;");
+    expect(css).toContain("page-break-after: avoid !important;");
+    expect(css).toContain("--text-pequeno: 9pt;");
+    expect(css).toContain("font-size: 9.5pt !important;");
   });
 });
