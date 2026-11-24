@@ -18,11 +18,11 @@ import { Topo } from "@/components/ui/Topo";
 import { api, ErroApi, mensagemParaPessoa } from "@/lib/api";
 import { passoDepoisDaLicao } from "@/lib/missoesDasTrilhas";
 import { MOLA_CURTA } from "@/lib/movimento";
-import { AFETADAS_POR_LICAO, invalidar, preCarregar } from "@/lib/cacheDados";
+import { AFETADAS_POR_LICAO, invalidar, lerEntrada, preCarregar } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
 import { DESKTOP, useMidia } from "@/lib/useMidia";
 import { useTemSessao } from "@/lib/useTemSessao";
-import type { LicaoDetalhada, Missao } from "@/types";
+import type { LicaoDetalhada, Missao, MomentoDiagnostico } from "@/types";
 
 type Props = { slug: string; licaoId: string };
 
@@ -85,6 +85,26 @@ export function TelaLicao({ slug, licaoId }: Props) {
     trilha.estado === "pronto" &&
     licao.estado === "pronto" &&
     (Boolean(trilha.dados.concluida) || (licao.dados.proximaLicaoId === null && licao.dados.concluida));
+  const momentoDiagnostico: MomentoDiagnostico | null =
+    temSessao === true
+      ? nenhumaLicaoConcluida
+        ? "antes"
+        : trilhaTodaConcluida
+          ? "depois"
+          : null
+      : null;
+  const chaveDiagnostico = momentoDiagnostico ? `diagnostico-${slug}-${momentoDiagnostico}` : null;
+  const diagnostico = useDados(chaveDiagnostico, () => api.obterDiagnostico(slug, momentoDiagnostico!));
+  const entradaDiagnostico = chaveDiagnostico ? lerEntrada(chaveDiagnostico) : undefined;
+  const conviteDiagnostico =
+    momentoDiagnostico !== null &&
+    diagnostico.estado === "pronto" &&
+    !entradaDiagnostico?.carregando &&
+    !entradaDiagnostico?.invalida &&
+    Boolean(diagnostico.dados?.disponivel) &&
+    !diagnostico.dados?.respondido
+      ? momentoDiagnostico
+      : null;
 
   async function concluir(evento: MouseEvent<HTMLButtonElement>) {
     if (licao.estado !== "pronto" || !passo) return;
@@ -132,7 +152,7 @@ export function TelaLicao({ slug, licaoId }: Props) {
                 </span>
               )}
               <h1 className="text-titulo-1">{licao.dados.titulo}</h1>
-              {temSessao && nenhumaLicaoConcluida && (
+              {conviteDiagnostico === "antes" && (
                 <Card tom="primaria" sombra={false} className="flex flex-wrap items-center justify-between gap-3 p-3.5">
                   <div className="flex flex-col gap-0.5">
                     <strong className="text-sm">Antes de começar: responda 4 perguntas rápidas</strong>
@@ -145,7 +165,7 @@ export function TelaLicao({ slug, licaoId }: Props) {
                   </BotaoLink>
                 </Card>
               )}
-              {temSessao && trilhaTodaConcluida && (
+              {conviteDiagnostico === "depois" && (
                 <Card tom="sucesso" sombra={false} className="flex flex-wrap items-center justify-between gap-3 p-3.5">
                   <div className="flex flex-col gap-0.5">
                     <strong className="text-sm">Trilha concluída! Compare com suas respostas do início</strong>

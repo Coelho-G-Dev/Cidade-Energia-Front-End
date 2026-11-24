@@ -297,67 +297,121 @@ describe("TelaDiagnostico", () => {
 });
 
 describe("convites do diagnóstico em TelaTrilhas e TelaLicao", () => {
-  it("mostra 'Ver o que você já sabe' sem lição concluída e 'Ver o quanto você aprendeu' com a trilha concluída", async () => {
-    api.listarTrilhas.mockResolvedValue([
-      {
-        id: "t1",
-        slug: "energia-solar-em-sao-luis",
-        titulo: "Energia solar em São Luís",
-        descricao: "Descrição",
-        tema: "solar",
-        minutos: 15,
-        totalLicoes: 4,
-        licoesConcluidas: 0,
-        concluida: false,
-      },
-      {
-        id: "t2",
-        slug: "a-energia-do-maranhao",
-        titulo: "A energia do Maranhão",
-        descricao: "Descrição",
-        tema: "renovaveis",
-        minutos: 15,
-        totalLicoes: 4,
-        licoesConcluidas: 4,
-        concluida: true,
-      },
-    ]);
+  const trilhaNova = {
+    id: "t1",
+    slug: "energia-solar-em-sao-luis",
+    titulo: "Energia solar em São Luís",
+    descricao: "Descrição",
+    tema: "solar",
+    minutos: 15,
+    totalLicoes: 4,
+    licoesConcluidas: 0,
+    concluida: false,
+  };
+  const trilhaConcluida = {
+    id: "t2",
+    slug: "a-energia-do-maranhao",
+    titulo: "A energia do Maranhão",
+    descricao: "Descrição",
+    tema: "renovaveis",
+    minutos: 15,
+    totalLicoes: 4,
+    licoesConcluidas: 4,
+    concluida: true,
+  };
+  const trilhaEmAndamento = {
+    id: "t3",
+    slug: "ar-condicionado-sem-susto",
+    titulo: "Ar-condicionado sem susto",
+    descricao: "Descrição",
+    tema: "eficiencia",
+    minutos: 12,
+    totalLicoes: 4,
+    licoesConcluidas: 2,
+    concluida: false,
+  };
+
+  const licao1 = {
+    id: "l1",
+    trilha: { slug: "energia-solar-em-sao-luis", titulo: "Energia solar em São Luís" },
+    ordem: 1,
+    titulo: "Primeira lição",
+    conteudo: "Texto inicial da primeira lição.",
+    tipo: "texto" as const,
+    totalPerguntas: 0,
+    concluida: false,
+    liberada: true,
+    licaoPendente: null,
+    proximaLicaoId: "l2",
+  };
+
+  const licao4Concluida = {
+    id: "l4",
+    trilha: { slug: "energia-solar-em-sao-luis", titulo: "Energia solar em São Luís" },
+    ordem: 4,
+    titulo: "Última lição",
+    conteudo: "Texto final da última lição.",
+    tipo: "texto" as const,
+    totalPerguntas: 0,
+    concluida: true,
+    liberada: true,
+    licaoPendente: null,
+    proximaLicaoId: null,
+  };
+
+  it("mostra convites só quando disponivel && !respondido (e consulta só trilhas candidatas)", async () => {
+    api.listarTrilhas.mockResolvedValue([trilhaNova, trilhaConcluida, trilhaEmAndamento]);
     api.listarMissoes.mockResolvedValue([]);
+    api.obterDiagnostico.mockImplementation(async (slug: string, momento: "antes" | "depois") => ({
+      momento,
+      disponivel: true,
+      respondido: false,
+      perguntas: perguntasDiagnosticoSemGabarito(slug),
+    }));
 
     const { unmount } = render(<TelaTrilhas />);
     expect(await screen.findByRole("link", { name: "Ver o que você já sabe" })).toHaveAttribute(
       "href",
       "/trilhas/energia-solar-em-sao-luis/diagnostico?momento=antes",
     );
-    expect(screen.getByRole("link", { name: "Ver o quanto você aprendeu" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Ver o quanto você aprendeu" })).toHaveAttribute(
       "href",
       "/trilhas/a-energia-do-maranhao/diagnostico?momento=depois",
     );
+    expect(api.obterDiagnostico).toHaveBeenCalledTimes(2);
+    expect(api.obterDiagnostico).toHaveBeenCalledWith("energia-solar-em-sao-luis", "antes");
+    expect(api.obterDiagnostico).toHaveBeenCalledWith("a-energia-do-maranhao", "depois");
+    expect(api.obterDiagnostico).not.toHaveBeenCalledWith("ar-condicionado-sem-susto", expect.anything());
     unmount();
 
     limparCache();
     api.obterTrilha.mockResolvedValue({
-      slug: "energia-solar-em-sao-luis",
-      titulo: "Energia solar em São Luís",
-      tema: "solar",
-      totalLicoes: 4,
+      ...trilhaNova,
+      licoes: [{ id: "l1", ordem: 1, titulo: "Primeira lição", tipo: "texto", concluida: false, liberada: true }],
+    });
+    api.obterLicao.mockResolvedValue(licao1);
+    api.obterQuiz.mockResolvedValue({ licaoId: "l1", licaoConcluida: false, perguntas: [] });
+
+    const telaLicao1 = render(
+      <ProvedorCelebracao>
+        <TelaLicao slug="energia-solar-em-sao-luis" licaoId="l1" />
+      </ProvedorCelebracao>,
+    );
+    expect(await screen.findByText("Antes de começar: responda 4 perguntas rápidas")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver o que você já sabe" })).toHaveAttribute(
+      "href",
+      "/trilhas/energia-solar-em-sao-luis/diagnostico?momento=antes",
+    );
+    telaLicao1.unmount();
+
+    limparCache();
+    api.obterTrilha.mockResolvedValue({
+      ...trilhaNova,
       licoesConcluidas: 4,
       concluida: true,
       licoes: [{ id: "l4", ordem: 4, titulo: "Última lição", tipo: "texto", concluida: true, liberada: true }],
     });
-    api.obterLicao.mockResolvedValue({
-      id: "l4",
-      trilha: { slug: "energia-solar-em-sao-luis", titulo: "Energia solar em São Luís" },
-      ordem: 4,
-      titulo: "Última lição",
-      conteudo: "Texto final.",
-      tipo: "texto",
-      totalPerguntas: 0,
-      concluida: true,
-      liberada: true,
-      licaoPendente: null,
-      proximaLicaoId: null,
-    });
+    api.obterLicao.mockResolvedValue(licao4Concluida);
     api.obterQuiz.mockResolvedValue({ licaoId: "l4", licaoConcluida: true, perguntas: [] });
 
     render(
@@ -365,10 +419,170 @@ describe("convites do diagnóstico em TelaTrilhas e TelaLicao", () => {
         <TelaLicao slug="energia-solar-em-sao-luis" licaoId="l4" />
       </ProvedorCelebracao>,
     );
-    expect(await screen.findByRole("link", { name: "Ver o quanto você aprendeu" })).toHaveAttribute(
+    expect(await screen.findByText("Trilha concluída! Compare com suas respostas do início")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver o quanto você aprendeu" })).toHaveAttribute(
       "href",
       "/trilhas/energia-solar-em-sao-luis/diagnostico?momento=depois",
     );
+  });
+
+  it("oculta os convites quando o diagnóstico já foi respondido (respondido: true)", async () => {
+    api.listarTrilhas.mockResolvedValue([trilhaNova, trilhaConcluida]);
+    api.listarMissoes.mockResolvedValue([]);
+    api.obterDiagnostico.mockImplementation(async (_slug: string, momento: "antes" | "depois") => ({
+      momento,
+      disponivel: false,
+      respondido: true,
+      perguntas: [],
+    }));
+
+    const { unmount } = render(<TelaTrilhas />);
+    expect(await screen.findByText("Energia solar em São Luís")).toBeInTheDocument();
+    await waitFor(() => expect(api.obterDiagnostico).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("link", { name: "Ver o que você já sabe" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ver o quanto você aprendeu" })).not.toBeInTheDocument();
+    unmount();
+
+    limparCache();
+    api.obterTrilha.mockResolvedValue({
+      ...trilhaNova,
+      licoes: [{ id: "l1", ordem: 1, titulo: "Primeira lição", tipo: "texto", concluida: false, liberada: true }],
+    });
+    api.obterLicao.mockResolvedValue(licao1);
+    api.obterQuiz.mockResolvedValue({ licaoId: "l1", licaoConcluida: false, perguntas: [] });
+
+    const telaLicao1 = render(
+      <ProvedorCelebracao>
+        <TelaLicao slug="energia-solar-em-sao-luis" licaoId="l1" />
+      </ProvedorCelebracao>,
+    );
+    expect(await screen.findByRole("heading", { name: "Primeira lição" })).toBeInTheDocument();
+    await waitFor(() => expect(api.obterDiagnostico).toHaveBeenCalledWith("energia-solar-em-sao-luis", "antes"));
+    expect(screen.queryByText("Antes de começar: responda 4 perguntas rápidas")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ver o que você já sabe" })).not.toBeInTheDocument();
+    telaLicao1.unmount();
+
+    limparCache();
+    api.obterTrilha.mockResolvedValue({
+      ...trilhaNova,
+      licoesConcluidas: 4,
+      concluida: true,
+      licoes: [{ id: "l4", ordem: 4, titulo: "Última lição", tipo: "texto", concluida: true, liberada: true }],
+    });
+    api.obterLicao.mockResolvedValue(licao4Concluida);
+    api.obterQuiz.mockResolvedValue({ licaoId: "l4", licaoConcluida: true, perguntas: [] });
+
+    render(
+      <ProvedorCelebracao>
+        <TelaLicao slug="energia-solar-em-sao-luis" licaoId="l4" />
+      </ProvedorCelebracao>,
+    );
+    expect(await screen.findByRole("heading", { name: "Última lição" })).toBeInTheDocument();
+    await waitFor(() => expect(api.obterDiagnostico).toHaveBeenCalledWith("energia-solar-em-sao-luis", "depois"));
+    expect(screen.queryByText("Trilha concluída! Compare com suas respostas do início")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ver o quanto você aprendeu" })).not.toBeInTheDocument();
+  });
+
+  it("oculta o convite do 'depois' quando disponivel é false (estudante pulou o 'antes')", async () => {
+    api.listarTrilhas.mockResolvedValue([trilhaConcluida]);
+    api.listarMissoes.mockResolvedValue([]);
+    api.obterDiagnostico.mockResolvedValue({
+      momento: "depois",
+      disponivel: false,
+      respondido: false,
+      perguntas: [],
+    });
+
+    const { unmount } = render(<TelaTrilhas />);
+    expect(await screen.findByText("A energia do Maranhão")).toBeInTheDocument();
+    await waitFor(() => expect(api.obterDiagnostico).toHaveBeenCalledWith("a-energia-do-maranhao", "depois"));
+    expect(screen.queryByRole("link", { name: "Ver o quanto você aprendeu" })).not.toBeInTheDocument();
+    unmount();
+
+    limparCache();
+    api.obterTrilha.mockResolvedValue({
+      ...trilhaNova,
+      licoesConcluidas: 4,
+      concluida: true,
+      licoes: [{ id: "l4", ordem: 4, titulo: "Última lição", tipo: "texto", concluida: true, liberada: true }],
+    });
+    api.obterLicao.mockResolvedValue(licao4Concluida);
+    api.obterQuiz.mockResolvedValue({ licaoId: "l4", licaoConcluida: true, perguntas: [] });
+
+    render(
+      <ProvedorCelebracao>
+        <TelaLicao slug="energia-solar-em-sao-luis" licaoId="l4" />
+      </ProvedorCelebracao>,
+    );
+    expect(await screen.findByRole("heading", { name: "Última lição" })).toBeInTheDocument();
+    await waitFor(() => expect(api.obterDiagnostico).toHaveBeenCalledWith("energia-solar-em-sao-luis", "depois"));
+    expect(screen.queryByText("Trilha concluída! Compare com suas respostas do início")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ver o quanto você aprendeu" })).not.toBeInTheDocument();
+  });
+
+  it("oculta o convite com erro da API e carrega a lição normalmente sem mostrar erro", async () => {
+    api.listarTrilhas.mockResolvedValue([trilhaNova, trilhaConcluida]);
+    api.listarMissoes.mockResolvedValue([]);
+    api.obterDiagnostico.mockRejectedValue(new ErroApi(500, "ERRO_INTERNO", "Falha no diagnóstico."));
+
+    const { unmount } = render(<TelaTrilhas />);
+    expect(await screen.findByText("Energia solar em São Luís")).toBeInTheDocument();
+    await waitFor(() => expect(api.obterDiagnostico).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("link", { name: "Ver o que você já sabe" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ver o quanto você aprendeu" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    unmount();
+
+    limparCache();
+    api.obterTrilha.mockResolvedValue({
+      ...trilhaNova,
+      licoes: [{ id: "l1", ordem: 1, titulo: "Primeira lição", tipo: "texto", concluida: false, liberada: true }],
+    });
+    api.obterLicao.mockResolvedValue(licao1);
+    api.obterQuiz.mockResolvedValue({ licaoId: "l1", licaoConcluida: false, perguntas: [] });
+
+    render(
+      <ProvedorCelebracao>
+        <TelaLicao slug="energia-solar-em-sao-luis" licaoId="l1" />
+      </ProvedorCelebracao>,
+    );
+    expect(await screen.findByRole("heading", { name: "Primeira lição" })).toBeInTheDocument();
+    expect(screen.getByText("Texto inicial da primeira lição.")).toBeInTheDocument();
+    await waitFor(() => expect(api.obterDiagnostico).toHaveBeenCalledWith("energia-solar-em-sao-luis", "antes"));
+    expect(screen.queryByText("Antes de começar: responda 4 perguntas rápidas")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ver o que você já sabe" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("sem sessão: mantém o link em TelaTrilhas sem chamar obterDiagnostico e oculta o convite em TelaLicao", async () => {
+    sessao.token.mockResolvedValue(null);
+    api.listarTrilhas.mockResolvedValue([trilhaNova]);
+    api.listarMissoes.mockResolvedValue([]);
+
+    const { unmount } = render(<TelaTrilhas />);
+    expect(await screen.findByRole("link", { name: "Ver o que você já sabe" })).toHaveAttribute(
+      "href",
+      "/trilhas/energia-solar-em-sao-luis/diagnostico?momento=antes",
+    );
+    expect(api.obterDiagnostico).not.toHaveBeenCalled();
+    unmount();
+
+    limparCache();
+    api.obterTrilha.mockResolvedValue({
+      ...trilhaNova,
+      licoes: [{ id: "l1", ordem: 1, titulo: "Primeira lição", tipo: "texto", concluida: false, liberada: true }],
+    });
+    api.obterLicao.mockResolvedValue(licao1);
+    api.obterQuiz.mockResolvedValue({ licaoId: "l1", licaoConcluida: false, perguntas: [] });
+
+    render(
+      <ProvedorCelebracao>
+        <TelaLicao slug="energia-solar-em-sao-luis" licaoId="l1" />
+      </ProvedorCelebracao>,
+    );
+    expect(await screen.findByRole("heading", { name: "Primeira lição" })).toBeInTheDocument();
+    expect(screen.queryByText("Antes de começar: responda 4 perguntas rápidas")).not.toBeInTheDocument();
+    expect(api.obterDiagnostico).not.toHaveBeenCalled();
   });
 });
 

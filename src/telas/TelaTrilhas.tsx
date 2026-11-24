@@ -13,9 +13,10 @@ import { Icone } from "@/components/ui/Icone";
 import { api } from "@/lib/api";
 import { progressoDaMissao } from "@/lib/missoesDasTrilhas";
 import { DURACAO, MOLA_CURTA } from "@/lib/movimento";
-import { preCarregar } from "@/lib/cacheDados";
+import { lerEntrada, preCarregar } from "@/lib/cacheDados";
 import { useDados } from "@/lib/useDados";
-import type { ResumoTrilha } from "@/types";
+import { useTemSessao } from "@/lib/useTemSessao";
+import type { MomentoDiagnostico, ResumoTrilha } from "@/types";
 
 function situacao(t: ResumoTrilha): string {
   if (t.concluida) return "Concluída";
@@ -37,9 +38,28 @@ export function filtrarTrilhas(trilhas: readonly ResumoTrilha[], filtro: IdFiltr
   return temas ? trilhas.filter((t) => temas.includes(t.tema)) : [...trilhas];
 }
 
-export function CardTrilha({ trilha }: { trilha: ResumoTrilha }) {
+export function CardTrilha({ trilha, temSessao }: { trilha: ResumoTrilha; temSessao?: boolean | null }) {
   // Ao encostar no card, a trilha já começa a vir: o "continuar" só espera a lição.
   const adiantar = () => preCarregar(`trilha-${trilha.slug}`, () => api.obterTrilha(trilha.slug));
+  const momentoCandidato: MomentoDiagnostico | null = trilha.concluida
+    ? "depois"
+    : trilha.licoesConcluidas === 0
+      ? "antes"
+      : null;
+  const chaveDiagnostico =
+    temSessao === true && momentoCandidato ? `diagnostico-${trilha.slug}-${momentoCandidato}` : null;
+  const diagnostico = useDados(chaveDiagnostico, () => api.obterDiagnostico(trilha.slug, momentoCandidato!));
+  const entradaDiagnostico = chaveDiagnostico ? lerEntrada(chaveDiagnostico) : undefined;
+  const mostrarConvite =
+    momentoCandidato !== null &&
+    (temSessao === false ||
+      (temSessao === true &&
+        diagnostico.estado === "pronto" &&
+        !entradaDiagnostico?.carregando &&
+        !entradaDiagnostico?.invalida &&
+        Boolean(diagnostico.dados?.disponivel) &&
+        !diagnostico.dados?.respondido));
+
   return (
     <div className="flex h-full flex-col gap-2">
       <Link
@@ -73,7 +93,7 @@ export function CardTrilha({ trilha }: { trilha: ResumoTrilha }) {
           </span>
         </span>
       </Link>
-      {trilha.licoesConcluidas === 0 && (
+      {mostrarConvite && momentoCandidato === "antes" && (
         <Link
           href={`/trilhas/${trilha.slug}/diagnostico?momento=antes`}
           className="afundar-leve inline-flex min-h-11 items-center gap-1.5 self-start rounded-pequeno px-2 text-pequeno font-bold text-primaria underline underline-offset-2"
@@ -81,7 +101,7 @@ export function CardTrilha({ trilha }: { trilha: ResumoTrilha }) {
           Ver o que você já sabe
         </Link>
       )}
-      {trilha.concluida && (
+      {mostrarConvite && momentoCandidato === "depois" && (
         <Link
           href={`/trilhas/${trilha.slug}/diagnostico?momento=depois`}
           className="afundar-leve inline-flex min-h-11 items-center gap-1.5 self-start rounded-pequeno px-2 text-pequeno font-bold text-sucesso underline underline-offset-2"
@@ -96,6 +116,7 @@ export function CardTrilha({ trilha }: { trilha: ResumoTrilha }) {
 export function TelaTrilhas() {
   const trilhas = useDados("trilhas", () => api.listarTrilhas());
   const missoes = useDados("missoes", () => api.listarMissoes());
+  const temSessao = useTemSessao();
   const [filtro, setFiltro] = useState<IdFiltro>("todas");
   const visiveis = trilhas.estado === "pronto" ? filtrarTrilhas(trilhas.dados, filtro) : [];
 
@@ -128,7 +149,7 @@ export function TelaTrilhas() {
                   exit={{ opacity: 0 }}
                   transition={{ ...MOLA_CURTA, opacity: { duration: DURACAO.rapida } }}
                 >
-                  <CardTrilha trilha={trilha} />
+                  <CardTrilha trilha={trilha} temSessao={temSessao} />
                 </motion.li>
               ))}
             </AnimatePresence>
